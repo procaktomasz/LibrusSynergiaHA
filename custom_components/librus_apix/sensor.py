@@ -76,6 +76,7 @@ async def async_setup_entry(
         LibrusWiadomosciSensor(coordinator, config_entry),
         LibrusZadaniaSensor(coordinator, config_entry),
         LibrusTerminarzSensor(coordinator, config_entry),
+        LibrusPlanLekcjiSensor(coordinator, config_entry),
     ]
 
     # Tworz czujniki per przedmiot na podstawie pierwszego pobrania danych
@@ -124,6 +125,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
             messages = await self.client.async_get_messages(count=10)
             homework_raw = await self.client.async_get_homework()
             schedule_raw = await self.client.async_get_schedule()
+            plan_lekcji_raw = await self.client.async_get_timetable()
 
             if grades is None:
                 # Zachowaj poprzednie dane o ocenach jesli dostepne, wiadomosci zaktualizuj jesli OK
@@ -150,6 +152,11 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                         if schedule_raw is not None
                         else prev.get("terminarz", [])
                     ),
+                    "plan_lekcji": (
+                        plan_lekcji_raw
+                        if plan_lekcji_raw is not None
+                        else prev.get("plan_lekcji", [])
+                    ),
                 }
 
             # Grupuj oceny wg przedmiotu i oznacz nowe
@@ -170,6 +177,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
             wiadomosci = self._build_wiadomosci(messages)
             zadania = self._build_zadania(homework_raw)
             terminarz = schedule_raw if schedule_raw is not None else []
+            plan_lekcji = plan_lekcji_raw if plan_lekcji_raw is not None else []
 
             result = {
                 "student_info": student_info,
@@ -178,6 +186,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 "wiadomosci": wiadomosci,
                 "zadania": zadania,
                 "terminarz": terminarz,
+                "plan_lekcji": plan_lekcji,
                 "semestr_biezacy": current_sem,
             }
 
@@ -648,18 +657,87 @@ class LibrusWiadomosciSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
         msgs = (self.coordinator.data or {}).get("wiadomosci", [])[:5]
+        
+        # Przygotuj liste wiadomosci
+        wiadomosci_list = [
+            {
+                "nadawca": m["author"],
+                "temat": m["title"],
+                "data": m["date"],
+                "nieprzeczytana": m.get("unread", False),
+                "jest_nowa": m.get("jest_nowa", False),
+                "ma_zalacznik": m.get("has_attachment", False),
+            }
+            for m in msgs
+        ]
+        
+        # Wypelnij puste miejsca do 5 elementów, aby szablony kart (Jinja) nie rzucaly błędami indeksu
+        while len(wiadomosci_list) < 5:
+            wiadomosci_list.append({
+                "nadawca": "",
+                "temat": "Brak",
+                "data": "",
+                "nieprzeczytana": False,
+                "jest_nowa": False,
+                "ma_zalacznik": False,
+            })
+
         return {
-            "wiadomosci": [
-                {
-                    "nadawca": m["author"],
-                    "temat": m["title"],
-                    "data": m["date"],
-                    "nieprzeczytana": m.get("unread", False),
-                    "jest_nowa": m.get("jest_nowa", False),
-                    "ma_zalacznik": m.get("has_attachment", False),
-                }
-                for m in msgs
-            ],
+            "wiadomosci": wiadomosci_list,
             "liczba_nieprzeczytanych": sum(1 for m in msgs if m.get("unread", False)),
             "sa_nowe_wiadomosci": any(m.get("jest_nowa", False) for m in msgs),
         }
+
+
+class LibrusPlanLekcjiSensor(CoordinatorEntity, SensorEntity):
+    """Czujnik z planem lekcji na dzis i jutro."""
+
+    def __init__(self, coordinator: LibrusDataUpdateCoordinator, config_entry: ConfigEntry) -> None:
+        """Inicjalizacja."""
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        self._attr_has_entity_name = False
+        self._attr_name = "Plan lekcji"
+        self._attr_unique_id = f"{config_entry.entry_id}_plan_lekcji"
+        self._attr_icon = "mdi:timetable"
+
+    @property
+    def device_info(self) -> Dict[str, Any]:
+        return _device_info(self.coordinator, self._config_entry)
+
+    @property
+    def native_value(self) -> str:
+        """Stan sensora to ilosc lekcji dzisiaj."""
+        data = self.coordinator.data or {}
+        plan = data.get("plan_lekcji", [])
+        
+        dzisiaj_idx = date.today().weekday()
+        
+        if not plan or dzisiaj_idx > 6:
+            return "0"
+            
+        dzisiaj_lekcje = plan[dzisiaj_idx] if dzisiaj_idx < len(plan) else []
+        return str(len(dzisiaj_lekcje))
+
+    @property
+    def extra_state_attributes(self) -> Dict[str, Any]:
+        data = self.coordinator.data or {}
+        plan = data.get("plan_lekcji", [])
+        
+        dzisiaj_idx = date.today().weekday()
+        
+        dzisiaj = []
+        jutro = []
+        
+        if plan and len(plan) == 7:
+            dzisiaj = plan[dzisiaj_idx]
+            if dzisiaj_idx < 6:
+                jutro = plan[dzisiaj_idx + 1]
+            else:
+                jutro = [] # Na niedziele nie pobieramy poniedzialku z nowego tyg.
+            
+        return {
+            "dzisiaj": dzisiaj,
+            "jutro": jutro,
+        }
+

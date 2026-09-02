@@ -303,6 +303,65 @@ class LibrusApiClient:
                 if attempt == 1:
                     return None
 
+    async def async_get_timetable(self):
+        """Get timetable (plan lekcji) from Librus."""
+        for attempt in range(2):
+            try:
+                if not self._client or not self._token:
+                    if not await self.async_authenticate():
+                        return None
+                client = self._client
+
+                from librus_apix.timetable import get_timetable
+                from datetime import date as _date, datetime, timedelta
+
+                today = _date.today()
+                monday = today - timedelta(days=today.weekday())
+                monday_dt = datetime.combine(monday, datetime.min.time())
+
+                loop = asyncio.get_running_loop()
+                timetable = await loop.run_in_executor(
+                    None, get_timetable, client, monday_dt
+                )
+
+                result = []
+                for day in timetable:
+                    day_list = []
+                    for period in day:
+                        if period.subject:
+                            day_list.append({
+                                "przedmiot": period.subject,
+                                "nauczyciel_i_sala": period.teacher_and_classroom,
+                                "godzina_od": period.date_from,
+                                "godzina_do": period.date_to,
+                                "data": period.date,
+                                "numer": period.number,
+                            })
+                    result.append(day_list)
+
+                return result
+
+            except TokenError:
+                _LOGGER.warning(
+                    "Token expired fetching timetable (attempt %d/2), re-authenticating...",
+                    attempt + 1,
+                )
+                self._reset_auth()
+                if attempt == 1:
+                    _LOGGER.error("Failed to get timetable after re-authentication.")
+                    return None
+            except Exception as ex:
+                if type(ex).__name__ == "ParseError":
+                    _LOGGER.info("Brak planu lekcji w tym tygodniu (wakacje/brak danych). Zwracam pusty plan.")
+                    return []
+                _LOGGER.error(
+                    "Failed to get timetable (attempt %d/2): %s\n%s",
+                    attempt + 1, ex, traceback.format_exc(),
+                )
+                self._reset_auth()
+                if attempt == 1:
+                    return None
+
     async def async_get_student_information(self):
         """Get student information from Librus."""
         try:
