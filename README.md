@@ -360,9 +360,12 @@ Pull requesty są mile widziane! Sprawdź [CONTRIBUTING.md](CONTRIBUTING.md)
 
 Specjalne podziękowania dla **KB** za wsparcie i pomoc w rozwoju projektu.
 
-## 👨‍💻 Autor
+## 👨‍💻 Autorzy i podziękowania
 
-Stworzono na bazie biblioteki [librus-apix](https://github.com/RustySnek/librus-apix)
+Ten projekt to tzw. *fork* (niezależna, rozwinięta gałąź) oryginalnej integracji, której twórcą jest **[LukMaverick](https://github.com/LukMaverick/LibrusSynergiaHA)**. 
+Pragnę gorąco podziękować pierwotnemu autorowi za stworzenie solidnego fundamentu integracji, na którym mogłem oprzeć i udostępnić społeczności moje nowości (takie jak natywne kalendarze lekcji, lista zadań domowych, przycisk odświeżania czy statystyki frekwencji).
+
+Projekt w warstwie komunikacyjnej korzysta z biblioteki [librus-apix](https://github.com/RustySnek/librus-apix) autorstwa RustySnek.
 
 ---
 
