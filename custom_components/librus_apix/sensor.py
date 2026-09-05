@@ -784,7 +784,7 @@ class LibrusFrekwencjaSensor(CoordinatorEntity, SensorEntity):
     def native_value(self) -> str:
         data = self.coordinator.data or {}
         frekwencja = data.get("frekwencja", [])
-        nieobecnosci = sum(1 for f in frekwencja if f.get("typ") in ["nb", "u"])
+        nieobecnosci = sum(1 for f in frekwencja if f.get("symbol") in ["nb", "u"])
         return str(nieobecnosci)
 
     @property
@@ -792,8 +792,8 @@ class LibrusFrekwencjaSensor(CoordinatorEntity, SensorEntity):
         data = self.coordinator.data or {}
         frekwencja = data.get("frekwencja", [])
         
-        spoznienia = [f for f in frekwencja if f.get("typ") == "sp"]
-        nieobecnosci = [f for f in frekwencja if f.get("typ") in ["nb", "u"]]
+        spoznienia = [f for f in frekwencja if f.get("symbol") == "sp"]
+        nieobecnosci = [f for f in frekwencja if f.get("symbol") in ["nb", "u"]]
         
         return {
             "lista_wpisow": frekwencja,
