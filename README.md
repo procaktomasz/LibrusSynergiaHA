@@ -105,7 +105,7 @@ Ta karta automatycznie dostosowuje się do ilości wiadomości i nie wyświetla 
 ```yaml
 type: markdown
 title: 📬 Wiadomości Librus
-content: >
+content: |
   {% set profil = 'imie_nazwisko' %}
   {% set encja = 'sensor.librus_' ~ profil ~ '_wiadomosci' %}
   {% set msgs = state_attr(encja, 'wiadomosci') %}
@@ -143,7 +143,7 @@ Legenda ikon:
 ```yaml
 type: markdown
 title: 📅 Terminarz
-content: >
+content: |
   {% set profil = 'imie_nazwisko' %}
   {% set encja = 'sensor.librus_' ~ profil ~ '_terminarz' %}
   {% set zdarzenia = state_attr(encja, 'zdarzenia') %}
@@ -151,13 +151,11 @@ content: >
   {% if zdarzenia == none %}
     ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`. Sprawdź wpisany profil!
   {% elif zdarzenia | length > 0 %} 
-
-      | Data | Dzień | Typ | Przedmiot | Opis |
-      |------|-------|-----|-----------|------|
-      {% for z in zdarzenia %}
-      | **{{ z.data }}** | {{ z.tydzien }} | {{ z.tytul }} | {{ z.przedmiot }} | {{ z.szczegoly.Opis if z.szczegoly.Opis != 'unknown' else '' }} |
-      {% endfor %} 
-
+    | Data | Dzień | Typ | Przedmiot | Opis |
+    |------|-------|-----|-----------|------|
+    {% for z in zdarzenia %}
+    | **{{ z.data }}** | {{ z.tydzien }} | {{ z.tytul }} | {{ z.przedmiot }} | {{ z.szczegoly.Opis if z.szczegoly.Opis != 'unknown' else '' }} |
+    {% endfor %} 
   {% else %} 
     Brak nadchodzących zdarzeń. 
   {% endif %}
@@ -170,7 +168,7 @@ content: >
 ```yaml
 type: markdown
 title: 📝 Sprawdziany i klasówki
-content: >
+content: |
   {% set profil = 'imie_nazwisko' %}
   {% set encja = 'sensor.librus_' ~ profil ~ '_terminarz' %}
   {% set zdarzenia = state_attr(encja, 'zdarzenia') %}
@@ -182,13 +180,11 @@ content: >
     {% set sprawdziany = zdarzenia | selectattr('tytul', 'in', typy_testow) | list %} 
     
     {% if sprawdziany | length > 0 %} 
-
-      | Data | Dzień | Typ | Przedmiot | Opis |
-      |------|-------|-----|-----------|------|
-      {% for z in sprawdziany %}
-      | **{{ z.data }}** | {{ z.tydzien }} | {{ z.tytul }} | {{ z.przedmiot }} | {{ z.szczegoly.Opis if z.szczegoly.Opis != 'unknown' else '' }} |
-      {% endfor %}
-
+    | Data | Dzień | Typ | Przedmiot | Opis |
+    |------|-------|-----|-----------|------|
+    {% for z in sprawdziany %}
+    | **{{ z.data }}** | {{ z.tydzien }} | {{ z.tytul }} | {{ z.przedmiot }} | {{ z.szczegoly.Opis if z.szczegoly.Opis != 'unknown' else '' }} |
+    {% endfor %}
     {% else %} 
       Brak nadchodzących sprawdzianów. 
     {% endif %}
@@ -227,7 +223,7 @@ title: ✅ Prace domowe
 ```yaml
 type: markdown
 title: 📢 Szkolne Aktualności
-content: >
+content: |
   {% set profil = 'imie_nazwisko' %}
   {% set encja_ogl = 'sensor.librus_' ~ profil ~ '_ogloszenia' %}
   {% set encja_frek = 'sensor.librus_' ~ profil ~ '_frekwencja' %}
@@ -260,7 +256,7 @@ content: >
 ```yaml
 type: markdown
 title: 📚 Plan Lekcji na cały tydzień
-content: >
+content: |
   {% set profil = 'imie_nazwisko' %}
   {% set encja = 'sensor.librus_' ~ profil ~ '_plan_lekcji' %}
   
@@ -279,13 +275,11 @@ content: >
     ### {{ nazwa }}
     {% set lekcje = state_attr(encja, klucz) %}
     {% if lekcje | length > 0 %}
-
-      | Godz. | Przedmiot | Nauczyciel i Sala |
-      |---|---|---|
-      {% for l in lekcje %}
-      | {{ l.godzina_od }}-{{ l.godzina_do }} | **{{ l.przedmiot }}** | {{ l.nauczyciel_i_sala }} |
-      {% endfor %}
-
+    | Godz. | Przedmiot | Nauczyciel i Sala |
+    |---|---|---|
+    {% for l in lekcje %}
+    | {{ l.godzina_od }}-{{ l.godzina_do }} | **{{ l.przedmiot }}** | {{ l.nauczyciel_i_sala }} |
+    {% endfor %}
     {% else %}
       *Brak lekcji*
     {% endif %}
