@@ -69,7 +69,8 @@ class LibrusTimetableCalendar(CoordinatorEntity, CalendarEntity):
         tz = zoneinfo.ZoneInfo("Europe/Warsaw")
         
         for day in plan:
-            for lekcja in day:
+            lekcje = day.get("lekcje", [])
+            for lekcja in lekcje:
                 try:
                     # Format: YYYY-MM-DD
                     lekcja_data = lekcja.get("data")
