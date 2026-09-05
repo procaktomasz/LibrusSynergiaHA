@@ -151,11 +151,13 @@ content: >
   {% if zdarzenia == none %}
     ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`. Sprawdź wpisany profil!
   {% elif zdarzenia | length > 0 %} 
-    | Data | Dzień | Typ | Przedmiot | Opis |
-    |------|-------|-----|-----------|------|
-    {% for z in zdarzenia %}
-    | **{{ z.data }}** | {{ z.tydzien }} | {{ z.tytul }} | {{ z.przedmiot }} | {{ z.szczegoly.Opis if z.szczegoly.Opis != 'unknown' else '' }} |
-    {% endfor %} 
+
+      | Data | Dzień | Typ | Przedmiot | Opis |
+      |------|-------|-----|-----------|------|
+      {% for z in zdarzenia %}
+      | **{{ z.data }}** | {{ z.tydzien }} | {{ z.tytul }} | {{ z.przedmiot }} | {{ z.szczegoly.Opis if z.szczegoly.Opis != 'unknown' else '' }} |
+      {% endfor %} 
+
   {% else %} 
     Brak nadchodzących zdarzeń. 
   {% endif %}
@@ -181,11 +183,11 @@ content: >
     
     {% if sprawdziany | length > 0 %} 
 
-| Data | Dzień | Typ | Przedmiot | Opis |
-|------|-------|-----|-----------|------|
-{% for z in sprawdziany %}
-| **{{ z.data }}** | {{ z.tydzien }} | {{ z.tytul }} | {{ z.przedmiot }} | {{ z.szczegoly.Opis if z.szczegoly.Opis != 'unknown' else '' }} |
-{% endfor %}
+      | Data | Dzień | Typ | Przedmiot | Opis |
+      |------|-------|-----|-----------|------|
+      {% for z in sprawdziany %}
+      | **{{ z.data }}** | {{ z.tydzien }} | {{ z.tytul }} | {{ z.przedmiot }} | {{ z.szczegoly.Opis if z.szczegoly.Opis != 'unknown' else '' }} |
+      {% endfor %}
 
     {% else %} 
       Brak nadchodzących sprawdzianów. 
@@ -278,11 +280,11 @@ content: >
     {% set lekcje = state_attr(encja, klucz) %}
     {% if lekcje | length > 0 %}
 
-| Godz. | Przedmiot | Nauczyciel i Sala |
-|---|---|---|
-{% for l in lekcje %}
-| {{ l.godzina_od }}-{{ l.godzina_do }} | **{{ l.przedmiot }}** | {{ l.nauczyciel_i_sala }} |
-{% endfor %}
+      | Godz. | Przedmiot | Nauczyciel i Sala |
+      |---|---|---|
+      {% for l in lekcje %}
+      | {{ l.godzina_od }}-{{ l.godzina_do }} | **{{ l.przedmiot }}** | {{ l.nauczyciel_i_sala }} |
+      {% endfor %}
 
     {% else %}
       *Brak lekcji*
