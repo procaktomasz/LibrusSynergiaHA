@@ -115,7 +115,7 @@ type: markdown
 title: 📬 Wiadomości Librus
 content: >
   {% set msgs = state_attr('sensor.librus_imie_nazwisko_wiadomosci', 'wiadomosci') %}
-  {% set nieprzeczytane = state_attr('sensor.librus_imie_nazwisko_wiadomosci', 'liczba_nieprzeczytanych') %}
+  {% set nieprzeczytane = state_attr('sensor.librus_imie_nazwisko_wiadomosci', 'liczba_nieprzeczytanych') | int(0) %}
   
   **Status:** {% if nieprzeczytane > 0 %}🔴 {{ nieprzeczytane }} nieprzeczytanych{% else %}⚫ Wszystkie przeczytane{% endif %}
   
