@@ -107,24 +107,27 @@ Ta karta automatycznie dostosowuje się do ilości wiadomości i nie wyświetla 
 type: markdown
 title: 📬 Wiadomości Librus
 content: >
-  {% set msgs = state_attr('sensor.librus_imie_nazwisko_wiadomosci', 'wiadomosci') %}
-  {% set nieprzeczytane = state_attr('sensor.librus_imie_nazwisko_wiadomosci', 'liczba_nieprzeczytanych') %}
+  {% set profil = 'imie_nazwisko' %}
+  {% set encja = 'sensor.librus_' ~ profil ~ '_wiadomosci' %}
+  {% set msgs = state_attr(encja, 'wiadomosci') %}
   
-  **Status:** {% if nieprzeczytane > 0 %}🔴 {{ nieprzeczytane }} nieprzeczytanych{% else %}⚫ Wszystkie przeczytane{% endif %}
-  
-  ***
-
-  {% if msgs %}
-    {% for m in msgs %}
-      {% if m.temat != 'Brak' %}
-  **{{ m.data }}** | {{ m.nadawca }}
-  > {% if m.nieprzeczytana %}🔴{% else %}⚫{% endif %} **{{ m.temat }}** {% if m.ma_zalacznik %}📎{% endif %}
-  
-  <br>
-      {% endif %}
-    {% endfor %}
+  {% if msgs == none %}
+    ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`. Sprawdź wpisany profil!
   {% else %}
-    Brak wiadomości.
+    {% set nieprzeczytane = state_attr(encja, 'liczba_nieprzeczytanych') | default(0) %}
+    **Status:** {% if nieprzeczytane > 0 %}🔴 {{ nieprzeczytane }} nieprzeczytanych{% else %}⚫ Wszystkie przeczytane{% endif %}
+    
+    ***
+    {% if msgs %}
+      {% for m in msgs %}
+        {% if m.temat != 'Brak' %}
+    **{{ m.data }}** | {{ m.nadawca }}
+    > {% if m.nieprzeczytana %}🔴{% else %}⚫{% endif %} **{{ m.temat }}** {% if m.ma_zalacznik %}📎{% endif %}
+    
+    <br>
+        {% endif %}
+      {% endfor %}
+    {% endif %}
   {% endif %}
 ```
 
@@ -142,14 +145,21 @@ Legenda ikon:
 type: markdown
 title: 📅 Terminarz
 content: >
-  {% set zdarzenia = state_attr('sensor.librus_imie_nazwisko_terminarz',
-  'zdarzenia') %} {% if zdarzenia %} | Data | Dzień | Typ | Przedmiot | Opis |
-   |------|-------|-----|-----------|------|
-  {% for z in zdarzenia %} | **{{ z.data }}** | {{ z.tydzien }} | {{ z.tytul }}
-  | {{ z.przedmiot }} | {{ z.szczegoly.Opis if z.szczegoly.Opis != 'unknown'
-  else '' }} |
-
-  {% endfor %} {% else %} Brak nadchodzących zdarzeń. {% endif %}
+  {% set profil = 'imie_nazwisko' %}
+  {% set encja = 'sensor.librus_' ~ profil ~ '_terminarz' %}
+  {% set zdarzenia = state_attr(encja, 'zdarzenia') %}
+  
+  {% if zdarzenia == none %}
+    ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`. Sprawdź wpisany profil!
+  {% elif zdarzenia | length > 0 %} 
+    | Data | Dzień | Typ | Przedmiot | Opis |
+    |------|-------|-----|-----------|------|
+    {% for z in zdarzenia %}
+    | **{{ z.data }}** | {{ z.tydzien }} | {{ z.tytul }} | {{ z.przedmiot }} | {{ z.szczegoly.Opis if z.szczegoly.Opis != 'unknown' else '' }} |
+    {% endfor %} 
+  {% else %} 
+    Brak nadchodzących zdarzeń. 
+  {% endif %}
 ```
 
 ### Karta sprawdzianów i klasówek (bez dni wolnych)
@@ -160,17 +170,26 @@ content: >
 type: markdown
 title: 📝 Sprawdziany i klasówki
 content: >
-  {% set zdarzenia = state_attr('sensor.librus_imie_nazwisko_terminarz',
-  'zdarzenia') %} {% set typy_testow = ['Sprawdzian', 'Kartkówka', 'Klasówka',
-  'Praca klasowa'] %} {% set sprawdziany = zdarzenia | selectattr('tytul', 'in',
-  typy_testow) | list %} {% if sprawdziany %} | Data | Dzień | Typ | Przedmiot |
-  Opis |
-   |------|-------|-----|-----------|------|
-  {% for z in sprawdziany %} | **{{ z.data }}** | {{ z.tydzien }} | {{ z.tytul
-  }} | {{ z.przedmiot }} | {{ z.szczegoly.Opis if z.szczegoly.Opis != 'unknown'
-  else '' }} |
-
-  {% endfor %} {% else %} Brak nadchodzących zdarzeń. {% endif %}
+  {% set profil = 'imie_nazwisko' %}
+  {% set encja = 'sensor.librus_' ~ profil ~ '_terminarz' %}
+  {% set zdarzenia = state_attr(encja, 'zdarzenia') %}
+  
+  {% if zdarzenia == none %}
+    ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`. Sprawdź wpisany profil!
+  {% else %}
+    {% set typy_testow = ['Sprawdzian', 'Kartkówka', 'Klasówka', 'Praca klasowa'] %}
+    {% set sprawdziany = zdarzenia | selectattr('tytul', 'in', typy_testow) | list %} 
+    
+    {% if sprawdziany | length > 0 %} 
+      | Data | Dzień | Typ | Przedmiot | Opis |
+      |------|-------|-----|-----------|------|
+      {% for z in sprawdziany %}
+      | **{{ z.data }}** | {{ z.tydzien }} | {{ z.tytul }} | {{ z.przedmiot }} | {{ z.szczegoly.Opis if z.szczegoly.Opis != 'unknown' else '' }} |
+      {% endfor %} 
+    {% else %} 
+      Brak nadchodzących sprawdzianów. 
+    {% endif %}
+  {% endif %}
 ```
 
 ### Karta natywnego Kalendarza (Home Assistant)
@@ -206,22 +225,29 @@ title: ✅ Prace domowe
 type: markdown
 title: 📢 Szkolne Aktualności
 content: >
-  **Bieżące Ogłoszenia:**
+  {% set profil = 'imie_nazwisko' %}
+  {% set encja_ogl = 'sensor.librus_' ~ profil ~ '_ogloszenia' %}
+  {% set encja_frek = 'sensor.librus_' ~ profil ~ '_frekwencja' %}
+  {% set ogl = state_attr(encja_ogl, 'lista_ogloszen') %}
   
-  {% set ogl = state_attr('sensor.librus_imie_nazwisko_ogloszenia', 'lista_ogloszen') %}
-  {% if ogl %}
-    {% for o in ogl %}
-      - **{{ o.data }} ({{ o.nadawca }})**: {{ o.tytul }} - {{ o.opis }}
-    {% endfor %}
+  {% if ogl == none %}
+    ⚠️ **Błąd:** Nie znaleziono encji dla profilu `{{ profil }}`.
   {% else %}
-    Brak nowych ogłoszeń.
+    **Bieżące Ogłoszenia:**
+    {% if ogl | length > 0 %}
+      {% for o in ogl %}
+        - **{{ o.data }} ({{ o.nadawca }})**: {{ o.tytul }} - {{ o.opis }}
+      {% endfor %}
+    {% else %}
+      Brak nowych ogłoszeń.
+    {% endif %}
+
+    ***
+
+    **Statystyki Frekwencji:**
+    - Spóźnienia: {{ state_attr(encja_frek, 'liczba_spoznien') | default(0) }}
+    - Nieobecności: {{ state_attr(encja_frek, 'liczba_nieobecnosci') | default(0) }}
   {% endif %}
-
-  ***
-
-  **Statystyki Frekwencji:**
-  - Spóźnienia: {{ state_attr('sensor.librus_imie_nazwisko_frekwencja', 'liczba_spoznien') | default(0) }}
-  - Nieobecności: {{ state_attr('sensor.librus_imie_nazwisko_frekwencja', 'liczba_nieobecnosci') | default(0) }}
 ```
 
 ### Karta pełnego Planu Lekcji (7 dni) na własnym szablonie Markdown
@@ -232,29 +258,34 @@ content: >
 type: markdown
 title: 📚 Plan Lekcji na cały tydzień
 content: >
-  {% set encja = 'sensor.librus_imie_nazwisko_plan_lekcji' %}
-  {% set dni = [
-    ('Poniedziałek', 'poniedzialek'),
-    ('Wtorek', 'wtorek'),
-    ('Środa', 'sroda'),
-    ('Czwartek', 'czwartek'),
-    ('Piątek', 'piatek')
-  ] %}
-
-  {% for nazwa, klucz in dni %}
-  ### {{ nazwa }}
-  {% set lekcje = state_attr(encja, klucz) %}
-  {% if lekcje %}
-    | Godz. | Przedmiot | Nauczyciel | Sala |
-    |---|---|---|---|
-    {% for l in lekcje %}
-    | {{ l.godzina }} | **{{ l.przedmiot }}** | {{ l.nauczyciel }} | {{ l.sala }} |
-    {% endfor %}
-  {% else %}
-    *Brak lekcji*
-  {% endif %}
+  {% set profil = 'imie_nazwisko' %}
+  {% set encja = 'sensor.librus_' ~ profil ~ '_plan_lekcji' %}
   
-  {% endfor %}
+  {% if state_attr(encja, 'poniedzialek') == none %}
+    ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`.
+  {% else %}
+    {% set dni = [
+      ('Poniedziałek', 'poniedzialek'),
+      ('Wtorek', 'wtorek'),
+      ('Środa', 'sroda'),
+      ('Czwartek', 'czwartek'),
+      ('Piątek', 'piatek')
+    ] %}
+
+    {% for nazwa, klucz in dni %}
+    ### {{ nazwa }}
+    {% set lekcje = state_attr(encja, klucz) %}
+    {% if lekcje | length > 0 %}
+      | Godz. | Przedmiot | Nauczyciel | Sala |
+      |---|---|---|---|
+      {% for l in lekcje %}
+      | {{ l.godzina }} | **{{ l.przedmiot }}** | {{ l.nauczyciel }} | {{ l.sala }} |
+      {% endfor %}
+    {% else %}
+      *Brak lekcji*
+    {% endif %}
+    {% endfor %}
+  {% endif %}
 ```
 
 ### Wykres średniej z przedmiotu (Gauge)
