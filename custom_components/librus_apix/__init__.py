@@ -139,7 +139,7 @@ class LibrusApiClient:
                 return all_grades
 
             except TokenError as ex:
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "Token expired fetching grades (attempt %d/2), re-authenticating...",
                     attempt + 1,
                 )
@@ -186,7 +186,7 @@ class LibrusApiClient:
                 return result
 
             except TokenError as ex:
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "Token expired fetching messages (attempt %d/2), re-authenticating...",
                     attempt + 1,
                 )
@@ -224,7 +224,7 @@ class LibrusApiClient:
                 )
 
             except TokenError:
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "Token expired fetching homework (attempt %d/2), re-authenticating...",
                     attempt + 1,
                 )
@@ -287,7 +287,7 @@ class LibrusApiClient:
                 return await loop.run_in_executor(None, _fetch_two_months)
 
             except TokenError:
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "Token expired fetching schedule (attempt %d/2), re-authenticating...",
                     attempt + 1,
                 )
@@ -343,7 +343,7 @@ class LibrusApiClient:
                 return result
 
             except TokenError:
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "Token expired fetching timetable (attempt %d/2), re-authenticating...",
                     attempt + 1,
                 )
@@ -377,7 +377,7 @@ class LibrusApiClient:
                 return await loop.run_in_executor(None, get_student_information, self._client)
 
             except TokenError:
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "Token expired fetching student information (attempt %d/2), re-authenticating...",
                     attempt + 1,
                 )
@@ -420,7 +420,7 @@ class LibrusApiClient:
                             })
                 return result
             except TokenError:
-                _LOGGER.warning("Token expired fetching attendance (attempt %d/2), re-authenticating...", attempt + 1)
+                _LOGGER.debug("Token expired fetching attendance (attempt %d/2), re-authenticating...", attempt + 1)
                 self._reset_auth()
                 if attempt == 1:
                     return None
@@ -455,7 +455,7 @@ class LibrusApiClient:
                         })
                 return result
             except TokenError:
-                _LOGGER.warning("Token expired fetching announcements (attempt %d/2), re-authenticating...", attempt + 1)
+                _LOGGER.debug("Token expired fetching announcements (attempt %d/2), re-authenticating...", attempt + 1)
                 self._reset_auth()
                 if attempt == 1:
                     return None
