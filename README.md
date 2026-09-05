@@ -180,11 +180,13 @@ content: >
     {% set sprawdziany = zdarzenia | selectattr('tytul', 'in', typy_testow) | list %} 
     
     {% if sprawdziany | length > 0 %} 
-      | Data | Dzień | Typ | Przedmiot | Opis |
-      |------|-------|-----|-----------|------|
-      {% for z in sprawdziany %}
-      | **{{ z.data }}** | {{ z.tydzien }} | {{ z.tytul }} | {{ z.przedmiot }} | {{ z.szczegoly.Opis if z.szczegoly.Opis != 'unknown' else '' }} |
-      {% endfor %} 
+
+| Data | Dzień | Typ | Przedmiot | Opis |
+|------|-------|-----|-----------|------|
+{% for z in sprawdziany %}
+| **{{ z.data }}** | {{ z.tydzien }} | {{ z.tytul }} | {{ z.przedmiot }} | {{ z.szczegoly.Opis if z.szczegoly.Opis != 'unknown' else '' }} |
+{% endfor %}
+
     {% else %} 
       Brak nadchodzących sprawdzianów. 
     {% endif %}
@@ -200,8 +202,8 @@ Zamiast budować tabele markdown dla planu lekcji i sprawdzianów, możesz uży�
 type: calendar
 title: 📅 Szkoła - Plan i Terminarz
 entities:
-  - calendar.librus_imie_nazwisko_plan_lekcji
-  - calendar.librus_imie_nazwisko_terminarz
+  - calendar.librus_imie_nazwisko_plan_lekcji_kalendarz
+  - calendar.librus_imie_nazwisko_terminarz_kalendarz
 initial_view: dayGridMonth
 ```
 
@@ -212,7 +214,7 @@ initial_view: dayGridMonth
 Wyświetl natywną listę kontrolną prac domowych prosto z Librusa!
 ```yaml
 type: todo-list
-entity: todo.librus_imie_nazwisko_zadania_domowe
+entity: todo.librus_imie_nazwisko_zadania_domowe_to_do
 title: ✅ Prace domowe
 ```
 
@@ -275,11 +277,13 @@ content: >
     ### {{ nazwa }}
     {% set lekcje = state_attr(encja, klucz) %}
     {% if lekcje | length > 0 %}
-      | Godz. | Przedmiot | Nauczyciel | Sala |
-      |---|---|---|---|
-      {% for l in lekcje %}
-      | {{ l.godzina }} | **{{ l.przedmiot }}** | {{ l.nauczyciel }} | {{ l.sala }} |
-      {% endfor %}
+
+| Godz. | Przedmiot | Nauczyciel i Sala |
+|---|---|---|
+{% for l in lekcje %}
+| {{ l.godzina_od }}-{{ l.godzina_do }} | **{{ l.przedmiot }}** | {{ l.nauczyciel_i_sala }} |
+{% endfor %}
+
     {% else %}
       *Brak lekcji*
     {% endif %}

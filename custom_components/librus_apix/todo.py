@@ -36,8 +36,8 @@ class LibrusHomeworkTodoList(CoordinatorEntity, TodoListEntity):
         super().__init__(coordinator)
         self._config_entry = config_entry
         self._attr_has_entity_name = False
-        self._attr_name = "Zadania domowe"
-        self._attr_unique_id = f"{config_entry.entry_id}_todo_homework"
+        self._attr_name = "Zadania domowe (To-Do)"
+        self._attr_unique_id = f"{config_entry.entry_id}_todo_zadania_domowe_to_do"
         self._attr_icon = "mdi:clipboard-list"
 
     @property

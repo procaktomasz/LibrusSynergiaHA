@@ -37,8 +37,8 @@ class LibrusTimetableCalendar(CoordinatorEntity, CalendarEntity):
         super().__init__(coordinator)
         self._config_entry = config_entry
         self._attr_has_entity_name = False
-        self._attr_name = "Plan Lekcji"
-        self._attr_unique_id = f"{config_entry.entry_id}_calendar_timetable"
+        self._attr_name = "Plan lekcji (Kalendarz)"
+        self._attr_unique_id = f"{config_entry.entry_id}_plan_lekcji_kalendarz"
         
         # Wymagane przez Home Assistant
         self._event: CalendarEvent | None = None
@@ -124,8 +124,8 @@ class LibrusScheduleCalendar(CoordinatorEntity, CalendarEntity):
         super().__init__(coordinator)
         self._config_entry = config_entry
         self._attr_has_entity_name = False
-        self._attr_name = "Terminarz"
-        self._attr_unique_id = f"{config_entry.entry_id}_calendar_schedule"
+        self._attr_name = "Terminarz (Kalendarz)"
+        self._attr_unique_id = f"{config_entry.entry_id}_terminarz_kalendarz"
         
         self._event: CalendarEvent | None = None
 
