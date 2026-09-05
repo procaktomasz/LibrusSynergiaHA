@@ -9,5 +9,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/procaktomasz/LibrusSynergiaHA/issues",
   "requirements": ["librus-apix>=1.5.1", "aiohttp"],
-  "version": "2.0.0"
+  "version": "2.0.1"
 }
