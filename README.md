@@ -108,14 +108,15 @@ entities:
 
 Ta karta automatycznie dostosowuje się do ilości wiadomości i nie wyświetla pustych wierszy!
 
-> Znajdź nazwę encji w **Developer Tools → States** (szukaj `wiadomosci`).
+> **WAŻNE:** Znajdź nazwę encji w **Developer Tools → States** (szukaj `wiadomosci`). 
+> Pamiętaj, aby we wszystkich poniższych kodach zmienić `sensor.librus_imie_nazwisko_...` na poprawną nazwę swojej encji!
 
 ```yaml
 type: markdown
 title: 📬 Wiadomości Librus
 content: >
   {% set msgs = state_attr('sensor.librus_imie_nazwisko_wiadomosci', 'wiadomosci') %}
-  {% set nieprzeczytane = state_attr('sensor.librus_imie_nazwisko_wiadomosci', 'liczba_nieprzeczytanych') | int(0) %}
+  {% set nieprzeczytane = state_attr('sensor.librus_imie_nazwisko_wiadomosci', 'liczba_nieprzeczytanych') %}
   
   **Status:** {% if nieprzeczytane > 0 %}🔴 {{ nieprzeczytane }} nieprzeczytanych{% else %}⚫ Wszystkie przeczytane{% endif %}
   
@@ -142,7 +143,8 @@ Legenda ikon:
 
 ### Karta terminarza (wszystkie zdarzenia)
 
-> Znajdź nazwę encji w **Developer Tools → States** (szukaj `terminarz`).
+> **WAŻNE:** Znajdź nazwę encji w **Developer Tools → States** (szukaj `terminarz`).
+> Zastąp `sensor.librus_imie_nazwisko_terminarz` w poniższym kodzie swoją własną nazwą!
 
 ```yaml
 type: markdown
@@ -159,6 +161,8 @@ content: >
 ```
 
 ### Karta sprawdzianów i klasówek (bez dni wolnych)
+
+> **WAŻNE:** Pamiętaj, aby podmienić w kodzie `sensor.librus_imie_nazwisko_terminarz` na nazwę z Twojego systemu!
 
 ```yaml
 type: markdown
@@ -198,6 +202,8 @@ title: ✅ Prace domowe
 
 ### Karta ogłoszeń i frekwencji (Markdown)
 
+> **WAŻNE:** Pamiętaj, aby podmienić w kodzie `imie_nazwisko` na poprawne dane z Twoich encji!
+
 ```yaml
 type: markdown
 title: 📢 Szkolne Aktualności
@@ -221,6 +227,8 @@ content: >
 ```
 
 ### Karta pełnego Planu Lekcji (7 dni) na własnym szablonie Markdown
+
+> **WAŻNE:** Zastąp `sensor.librus_imie_nazwisko_plan_lekcji` poprawną encją z Twojego panelu (Developer Tools → States)!
 
 ```yaml
 type: markdown
