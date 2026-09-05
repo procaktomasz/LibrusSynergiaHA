@@ -1,6 +1,5 @@
 # 🎓 Librus APIX Integration for Home Assistant
 
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/LukMaverick)
 
 Integracja Home Assistant z systemem Librus Synergia, umożliwiająca monitorowanie ocen, wiadomości i innych danych szkolnych.
 
@@ -413,9 +412,3 @@ Projekt w warstwie komunikacyjnej korzysta z biblioteki [librus-apix](https://gi
 ---
 
 **⭐ Jeśli podoba Ci się projekt, zostaw gwiazdkę na GitHub!**
-
-## ☕ Wesprzyj projekt
-
-Jeśli integracja jest dla Ciebie przydatna, możesz postawić kawę 😊
-
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/LukMaverick)
