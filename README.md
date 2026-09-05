@@ -77,17 +77,6 @@ Lub ręcznie:
    - **Hasło**: Twoje hasło do Librus
 4. Kliknij **"Prześlij"**
 
-## 🔧 Środowisko testowe
-
-Projekt zawiera local środowisko testowe z Docker:
-
-```bash
-# Uruchom środowisko testowe
-docker-compose up -d
-
-# Home Assistant dostępny pod: http://localhost:8123
-# Code Server dostępny pod: http://localhost:8443 (hasło: homeassistant)
-```
 
 ## 📊 Przykładowe karty Lovelace
 
@@ -329,29 +318,7 @@ automation:
 
 > **Gdzie znaleźć nazwę telefonu?** HA → Settings → Devices & Services → Mobile App → nazwa urządzenia (np. `notify.mobile_app_samsung_galaxy_s24`)
 
-## 🛠️ Rozwój
 
-### Wymagania
-- Python 3.9+
-- Home Assistant 2023.1+
-- librus-apix library
-
-### Setup środowiska deweloperskiego
-```bash
-# Klonuj repozytorium
-git clone https://github.com/twoje-username/librus-ha-integration
-cd librus-ha-integration
-
-# Uruchom środowisko testowe
-docker-compose up -d
-
-# Edytuj kod w Code Server (http://localhost:8443)
-```
-
-### Uruchomienie testów
-```bash
-pytest tests/
-```
 
 ## 📝 Logi
 
