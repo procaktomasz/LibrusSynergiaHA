@@ -81,15 +81,18 @@ Lub ręcznie:
 ## 📊 Przykładowe karty Lovelace
 
 ### Karta ocen i średnich
+
+> **WAŻNE:** Pamiętaj, aby we wszystkich poniższych nazwach zmienić `imie_nazwisko` na poprawne dane z Twoich encji!
+
 ```yaml
 type: entities
 title: "📚 Oceny Librus"
 entities:
-  - entity: sensor.librus_srednia_ocen
+  - entity: sensor.librus_imie_nazwisko_srednia_ocen
     name: "Globalna średnia"
-  - entity: sensor.librus_oceny
+  - entity: sensor.librus_imie_nazwisko_oceny
     name: "Liczba ocen"
-  - entity: sensor.librus_szczesliwy_numerek
+  - entity: sensor.librus_imie_nazwisko_szczesliwy_numerek
     name: "Szczęśliwy numerek"
 ```
 
@@ -171,21 +174,27 @@ content: >
 ```
 
 ### Karta natywnego Kalendarza (Home Assistant)
+
+> **WAŻNE:** Pamiętaj, aby podmienić encje na te przypisane do Twojego konta!
+
 Zamiast budować tabele markdown dla planu lekcji i sprawdzianów, możesz użyć systemowej karty kalendarza!
 ```yaml
 type: calendar
 title: 📅 Szkoła - Plan i Terminarz
 entities:
-  - calendar.plan_lekcji
-  - calendar.terminarz
+  - calendar.librus_imie_nazwisko_plan_lekcji
+  - calendar.librus_imie_nazwisko_terminarz
 initial_view: dayGridMonth
 ```
 
 ### Karta Zadań Domowych (To-Do List)
+
+> **WAŻNE:** Pamiętaj, aby zmienić `imie_nazwisko` na swoje dane!
+
 Wyświetl natywną listę kontrolną prac domowych prosto z Librusa!
 ```yaml
 type: todo-list
-entity: todo.zadania_domowe
+entity: todo.librus_imie_nazwisko_zadania_domowe
 title: ✅ Prace domowe
 ```
 
@@ -249,9 +258,12 @@ content: >
 ```
 
 ### Wykres średniej z przedmiotu (Gauge)
+
+> **WAŻNE:** Zastąp `imie_nazwisko` oraz nazwę przedmiotu swoimi danymi!
+
 ```yaml
 type: gauge
-entity: sensor.librus_srednia_matematyka
+entity: sensor.librus_imie_nazwisko_srednia_matematyka
 name: "Matematyka - średnia"
 min: 1
 max: 6
