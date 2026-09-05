@@ -727,12 +727,10 @@ class LibrusPlanLekcjiSensor(CoordinatorEntity, SensorEntity):
         data = self.coordinator.data or {}
         plan = data.get("plan_lekcji", [])
         
-        dzisiaj_idx = date.today().weekday()
-        
-        if not plan or dzisiaj_idx > 6:
+        if not plan:
             return "0"
             
-        dzisiaj_lekcje = plan[dzisiaj_idx] if dzisiaj_idx < len(plan) else []
+        dzisiaj_lekcje = plan[0].get("lekcje", [])
         return str(len(dzisiaj_lekcje))
 
     @property
@@ -740,24 +738,33 @@ class LibrusPlanLekcjiSensor(CoordinatorEntity, SensorEntity):
         data = self.coordinator.data or {}
         plan = data.get("plan_lekcji", [])
         
-        dni_tygodnia = ["poniedzialek", "wtorek", "sroda", "czwartek", "piatek", "sobota", "niedziela"]
-        wynik = {}
+        wynik = {
+            "kolejne_7_dni": plan
+        }
         
-        if plan and len(plan) == 7:
-            for i, dzien in enumerate(dni_tygodnia):
-                wynik[dzien] = plan[i]
-        else:
-            for dzien in dni_tygodnia:
-                wynik[dzien] = []
+        # Backward compatibility for old templates
+        dni_tygodnia_map = {
+            "Poniedziałek": "poniedzialek",
+            "Wtorek": "wtorek",
+            "Środa": "sroda",
+            "Czwartek": "czwartek",
+            "Piątek": "piatek",
+            "Sobota": "sobota",
+            "Niedziela": "niedziela"
+        }
         
-        dzisiaj_idx = date.today().weekday()
-        
-        if plan and len(plan) == 7:
-            wynik["dzisiaj"] = plan[dzisiaj_idx]
-            if dzisiaj_idx < 6:
-                wynik["jutro"] = plan[dzisiaj_idx + 1]
-            else:
-                wynik["jutro"] = [] # Na niedziele nie pobieramy poniedzialku z nowego tyg.
+        for d in dni_tygodnia_map.values():
+            wynik[d] = []
+            
+        for dzien in plan:
+            nazwa = dzien.get("dzien_tygodnia")
+            if nazwa in dni_tygodnia_map:
+                klucz = dni_tygodnia_map[nazwa]
+                wynik[klucz] = dzien.get("lekcje", [])
+                
+        if plan:
+            wynik["dzisiaj"] = plan[0].get("lekcje", [])
+            wynik["jutro"] = plan[1].get("lekcje", []) if len(plan) > 1 else []
         else:
             wynik["dzisiaj"] = []
             wynik["jutro"] = []

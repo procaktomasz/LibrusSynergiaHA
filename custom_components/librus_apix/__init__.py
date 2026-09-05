@@ -318,15 +318,30 @@ class LibrusApiClient:
 
                 today = _date.today()
                 monday = today - timedelta(days=today.weekday())
-                monday_dt = datetime.combine(monday, datetime.min.time())
+                next_monday = monday + timedelta(days=7)
 
                 loop = asyncio.get_running_loop()
-                timetable = await loop.run_in_executor(
-                    None, get_timetable, client, monday_dt
-                )
+                
+                def _fetch_two_weeks():
+                    tt1 = get_timetable(client, datetime.combine(monday, datetime.min.time()))
+                    tt2 = get_timetable(client, datetime.combine(next_monday, datetime.min.time()))
+                    return tt1 + tt2
+                    
+                timetable = await loop.run_in_executor(None, _fetch_two_weeks)
 
                 result = []
-                for day in timetable:
+                dni_nazwy = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
+                
+                # We have 14 days starting from 'monday'
+                # We want 7 days starting from 'today'
+                # 'today' is at index 'today.weekday()'
+                start_idx = today.weekday()
+                
+                for i in range(start_idx, start_idx + 7):
+                    day = timetable[i]
+                    day_date = (monday + timedelta(days=i)).strftime("%Y-%m-%d")
+                    dzien_tyg = dni_nazwy[i % 7]
+                    
                     day_list = []
                     for period in day:
                         if period.subject:
@@ -335,10 +350,14 @@ class LibrusApiClient:
                                 "nauczyciel_i_sala": period.teacher_and_classroom,
                                 "godzina_od": period.date_from,
                                 "godzina_do": period.date_to,
-                                "data": period.date,
+                                "data": period.date or day_date,
                                 "numer": period.number,
                             })
-                    result.append(day_list)
+                    result.append({
+                        "dzien_tygodnia": dzien_tyg,
+                        "data": day_date,
+                        "lekcje": day_list
+                    })
 
                 return result
 

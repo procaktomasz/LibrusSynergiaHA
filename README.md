@@ -257,27 +257,21 @@ title: 📚 Plan Lekcji na cały tydzień
 content: |
   {% set profil = 'imie_nazwisko' %}
   {% set encja = 'sensor.librus_' ~ profil ~ '_plan_lekcji' %}
+  {% set dni = state_attr(encja, 'kolejne_7_dni') %}
 
-  {% if state_attr(encja, 'poniedzialek') == none %}
+  {% if dni == none %}
   ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`.
   {% else %}
-  {% set dni = [
-  ('Poniedziałek', 'poniedzialek'),
-  ('Wtorek', 'wtorek'),
-  ('Środa', 'sroda'),
-  ('Czwartek', 'czwartek'),
-  ('Piątek', 'piatek')
-  ] %}
-
-  {% for nazwa, klucz in dni %}
-  ### {{ nazwa }}
-  {% set lekcje = state_attr(encja, klucz) %}
+  {% for dzien in dni %}
+  {% set lekcje = dzien.lekcje %}
   {% if lekcje | length > 0 %}
+  ### {{ dzien.dzien_tygodnia }} ({{ dzien.data }}) - Zajęcia od {{ lekcje[0].godzina_od }} do {{ lekcje[-1].godzina_do }}
   | Godz. | Przedmiot | Nauczyciel i Sala |
   |---|---|---|
   {% for l in lekcje %} | {{ l.godzina_od }}-{{ l.godzina_do }} | **{{ l.przedmiot }}** | {{ l.nauczyciel_i_sala }} |
   {% endfor %}
   {% else %}
+  ### {{ dzien.dzien_tygodnia }} ({{ dzien.data }})
   *Brak lekcji*
   {% endif %}
   {% endfor %}
