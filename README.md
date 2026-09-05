@@ -9,6 +9,10 @@ Integracja Home Assistant z systemem Librus Synergia, umożliwiająca monitorowa
 - 📊 **Monitoring ocen** - wszystkie oceny ze wszystkich przedmiotów
 - 📈 **Statystyki** - średnie ocen, liczba ocen, trend
 - 📧 **Wiadomości** - najnowsze wiadomości z dziennika
+- 📅 **Kalendarze** - wbudowany plan lekcji i terminarz w HA
+- ✅ **Zadania domowe** - wsparcie dla systemowych list To-Do
+- 📢 **Ogłoszenia** - odczyt szkolnej tablicy ogłoszeń
+- 👨‍🎓 **Frekwencja** - monitorowanie spóźnień i nieobecności
 - 🔔 **Powiadomienia** - automatyczne powiadomienia o nowych ocenach/wiadomościach
 - 🏠 **Dashboard** - piękne karty w Home Assistant
 
@@ -25,6 +29,12 @@ Integracja tworzy następujące sensory:
 | `sensor.librus_wiadomosci` | Ostatnie 5 wiadomości z pełną treścią | liczba nieprzeczytanych |
 | `sensor.librus_<przedmiot>` | Oceny z danego przedmiotu (np. `sensor.librus_matematyka`) | lista ocen: "4, 3+, 5" |
 | `sensor.librus_srednia_<przedmiot>` | **Średnia** z danego przedmiotu (np. `sensor.librus_srednia_matematyka`) | float (wykres 📈) |
+| `sensor.librus_plan_lekcji` | Plan lekcji na pełne 7 dni z rozbiciem na dni tygodnia | - |
+| `sensor.librus_frekwencja` | Lista nieobecności i spóźnień | liczba nieobecności |
+| `sensor.librus_ogloszenia` | Najnowsze ogłoszenia | liczba ogłoszeń |
+| `calendar.*_calendar_timetable` | Wbudowany kalendarz lekcji ucznia | wydarzenia |
+| `calendar.*_calendar_schedule` | Wbudowany kalendarz sprawdzianów i wydarzeń | wydarzenia |
+| `todo.*_todo_homework` | Systemowa lista zadań domowych z terminami oddania | lista zadań |
 
 Sensory średnich mają `state_class: measurement` — HA automatycznie rysuje dla nich wykres historyczny po kliknięciu w encję.
 
@@ -34,14 +44,14 @@ Sensory średnich mają `state_class: measurement` — HA automatycznie rysuje d
 
 Kliknij poniższy przycisk, aby automatycznie dodać repozytorium do HACS z właściwą kategorią:
 
-[![Otwórz w HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=LukMaverick&repository=LibrusSynergiaHA&category=integration)
+[![Otwórz w HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=procaktomasz&repository=LibrusSynergiaHA&category=integration)
 
 Lub ręcznie:
 
 1. Otwórz HACS w Home Assistant
 2. Kliknij trzy kropki (⋮) w prawym górnym rogu
 3. Wybierz **"Custom repositories"**
-4. W polu URL wpisz dokładnie: `https://github.com/LukMaverick/LibrusSynergiaHA`  
+4. W polu URL wpisz dokładnie: `https://github.com/procaktomasz/LibrusSynergiaHA`  
    ⚠️ **Bez `.git` na końcu!**
 5. W polu **Category** wybierz: **`Integration`**  
    ⚠️ **NIE wybieraj "AppDaemon", "Plugin" ani żadnej innej opcji!**
@@ -94,90 +104,41 @@ entities:
     name: "Szczęśliwy numerek"
 ```
 
-### Karta wiadomości (Mushroom)
+### Karta wiadomości (Markdown - Dynamiczna)
 
-> **Wymagane:** [Mushroom Cards](https://github.com/piitaya/lovelace-mushroom) zainstalowane przez HACS.
+Ta karta automatycznie dostosowuje się do ilości wiadomości i nie wyświetla pustych wierszy!
 
-#### Jak znaleźć nazwę swojej encji?
-1. Idź do **Developer Tools → States**
-2. Wyszukaj `wiadomosci`
-3. Skopiuj pełną nazwę encji (np. `sensor.wiadomosci`)
-4. Zamień `sensor.wiadomosci` poniżej na swoją nazwę
+> Znajdź nazwę encji w **Developer Tools → States** (szukaj `wiadomosci`).
 
 ```yaml
-type: vertical-stack
-cards:
-  - type: custom:mushroom-title-card
-    title: 📬 Wiadomości Librus
-    subtitle: >
-      {% set n = state_attr('sensor.wiadomosci', 'liczba_nieprzeczytanych') %}
-      {% if n > 0 %}{{ n }} nieprzeczytanych{% else %}Wszystkie przeczytane{% endif %}
+type: markdown
+title: 📬 Wiadomości Librus
+content: >
+  {% set msgs = state_attr('sensor.librus_imie_nazwisko_wiadomosci', 'wiadomosci') %}
+  {% set nieprzeczytane = state_attr('sensor.librus_imie_nazwisko_wiadomosci', 'liczba_nieprzeczytanych') %}
+  
+  **Status:** {% if nieprzeczytane > 0 %}🔴 {{ nieprzeczytane }} nieprzeczytanych{% else %}⚫ Wszystkie przeczytane{% endif %}
+  
+  ***
 
-  - type: custom:mushroom-template-card
-    primary: >
-      {{ state_attr('sensor.wiadomosci', 'wiadomosci')[0].temat | default('brak') }}
-    secondary: >
-      {{ state_attr('sensor.wiadomosci', 'wiadomosci')[0].nadawca | default('') }}
-      · {{ state_attr('sensor.wiadomosci', 'wiadomosci')[0].data | default('') }}
-    icon: mdi:message-text
-    icon_color: >
-      {% if state_attr('sensor.wiadomosci', 'wiadomosci')[0].nieprzeczytana %}red{% else %}grey{% endif %}
-    badge_icon: >
-      {% if state_attr('sensor.wiadomosci', 'wiadomosci')[0].ma_zalacznik %}mdi:paperclip{% endif %}
-
-  - type: custom:mushroom-template-card
-    primary: >
-      {{ state_attr('sensor.wiadomosci', 'wiadomosci')[1].temat | default('brak') }}
-    secondary: >
-      {{ state_attr('sensor.wiadomosci', 'wiadomosci')[1].nadawca | default('') }}
-      · {{ state_attr('sensor.wiadomosci', 'wiadomosci')[1].data | default('') }}
-    icon: mdi:message-text
-    icon_color: >
-      {% if state_attr('sensor.wiadomosci', 'wiadomosci')[1].nieprzeczytana %}red{% else %}grey{% endif %}
-    badge_icon: >
-      {% if state_attr('sensor.wiadomosci', 'wiadomosci')[1].ma_zalacznik %}mdi:paperclip{% endif %}
-
-  - type: custom:mushroom-template-card
-    primary: >
-      {{ state_attr('sensor.wiadomosci', 'wiadomosci')[2].temat | default('brak') }}
-    secondary: >
-      {{ state_attr('sensor.wiadomosci', 'wiadomosci')[2].nadawca | default('') }}
-      · {{ state_attr('sensor.wiadomosci', 'wiadomosci')[2].data | default('') }}
-    icon: mdi:message-text
-    icon_color: >
-      {% if state_attr('sensor.wiadomosci', 'wiadomosci')[2].nieprzeczytana %}red{% else %}grey{% endif %}
-    badge_icon: >
-      {% if state_attr('sensor.wiadomosci', 'wiadomosci')[2].ma_zalacznik %}mdi:paperclip{% endif %}
-
-  - type: custom:mushroom-template-card
-    primary: >
-      {{ state_attr('sensor.wiadomosci', 'wiadomosci')[3].temat | default('brak') }}
-    secondary: >
-      {{ state_attr('sensor.wiadomosci', 'wiadomosci')[3].nadawca | default('') }}
-      · {{ state_attr('sensor.wiadomosci', 'wiadomosci')[3].data | default('') }}
-    icon: mdi:message-text
-    icon_color: >
-      {% if state_attr('sensor.wiadomosci', 'wiadomosci')[3].nieprzeczytana %}red{% else %}grey{% endif %}
-    badge_icon: >
-      {% if state_attr('sensor.wiadomosci', 'wiadomosci')[3].ma_zalacznik %}mdi:paperclip{% endif %}
-
-  - type: custom:mushroom-template-card
-    primary: >
-      {{ state_attr('sensor.wiadomosci', 'wiadomosci')[4].temat | default('brak') }}
-    secondary: >
-      {{ state_attr('sensor.wiadomosci', 'wiadomosci')[4].nadawca | default('') }}
-      · {{ state_attr('sensor.wiadomosci', 'wiadomosci')[4].data | default('') }}
-    icon: mdi:message-text
-    icon_color: >
-      {% if state_attr('sensor.wiadomosci', 'wiadomosci')[4].nieprzeczytana %}red{% else %}grey{% endif %}
-    badge_icon: >
-      {% if state_attr('sensor.wiadomosci', 'wiadomosci')[4].ma_zalacznik %}mdi:paperclip{% endif %}
+  {% if msgs %}
+    {% for m in msgs %}
+      {% if m.temat != 'Brak' %}
+  **{{ m.data }}** | {{ m.nadawca }}
+  > {% if m.nieprzeczytana %}🔴{% else %}⚫{% endif %} **{{ m.temat }}** {% if m.ma_zalacznik %}📎{% endif %}
+  
+  <br>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    Brak wiadomości.
+  {% endif %}
 ```
 
 Legenda ikon:
 - 🔴 czerwona = nieprzeczytana
 - ⚫ szara = przeczytana
-- 📎 badge = ma załącznik
+- 📎 = ma załącznik
 
 ### Karta terminarza (wszystkie zdarzenia)
 
@@ -214,6 +175,80 @@ content: >
   else '' }} |
 
   {% endfor %} {% else %} Brak nadchodzących zdarzeń. {% endif %}
+```
+
+### Karta natywnego Kalendarza (Home Assistant)
+Zamiast budować tabele markdown dla planu lekcji i sprawdzianów, możesz użyć systemowej karty kalendarza!
+```yaml
+type: calendar
+title: 📅 Szkoła - Plan i Terminarz
+entities:
+  - calendar.plan_lekcji
+  - calendar.terminarz
+initial_view: dayGridMonth
+```
+
+### Karta Zadań Domowych (To-Do List)
+Wyświetl natywną listę kontrolną prac domowych prosto z Librusa!
+```yaml
+type: todo-list
+entity: todo.zadania_domowe
+title: ✅ Prace domowe
+```
+
+### Karta ogłoszeń i frekwencji (Markdown)
+
+```yaml
+type: markdown
+title: 📢 Szkolne Aktualności
+content: >
+  **Bieżące Ogłoszenia:**
+  
+  {% set ogl = state_attr('sensor.librus_imie_nazwisko_ogloszenia', 'lista_ogloszen') %}
+  {% if ogl %}
+    {% for o in ogl %}
+      - **{{ o.data }} ({{ o.nadawca }})**: {{ o.tytul }} - {{ o.opis }}
+    {% endfor %}
+  {% else %}
+    Brak nowych ogłoszeń.
+  {% endif %}
+
+  ***
+
+  **Statystyki Frekwencji:**
+  - Spóźnienia: {{ state_attr('sensor.librus_imie_nazwisko_frekwencja', 'liczba_spoznien') | default(0) }}
+  - Nieobecności: {{ state_attr('sensor.librus_imie_nazwisko_frekwencja', 'liczba_nieobecnosci') | default(0) }}
+```
+
+### Karta pełnego Planu Lekcji (7 dni) na własnym szablonie Markdown
+
+```yaml
+type: markdown
+title: 📚 Plan Lekcji na cały tydzień
+content: >
+  {% set encja = 'sensor.librus_imie_nazwisko_plan_lekcji' %}
+  {% set dni = [
+    ('Poniedziałek', 'poniedzialek'),
+    ('Wtorek', 'wtorek'),
+    ('Środa', 'sroda'),
+    ('Czwartek', 'czwartek'),
+    ('Piątek', 'piatek')
+  ] %}
+
+  {% for nazwa, klucz in dni %}
+  ### {{ nazwa }}
+  {% set lekcje = state_attr(encja, klucz) %}
+  {% if lekcje %}
+    | Godz. | Przedmiot | Nauczyciel | Sala |
+    |---|---|---|---|
+    {% for l in lekcje %}
+    | {{ l.godzina }} | **{{ l.przedmiot }}** | {{ l.nauczyciel }} | {{ l.sala }} |
+    {% endfor %}
+  {% else %}
+    *Brak lekcji*
+  {% endif %}
+  
+  {% endfor %}
 ```
 
 ### Wykres średniej z przedmiotu (Gauge)

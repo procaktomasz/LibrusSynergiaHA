@@ -31,7 +31,7 @@ def _current_semester() -> int:
     m = date.today().month
     return 1 if m >= 9 else 2
 
-PLATFORMS = ["sensor"]
+PLATFORMS = ["sensor", "calendar", "todo", "button"]
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -270,10 +270,11 @@ class LibrusApiClient:
                             event_date = _date(year, month, int(day_num))
                             if event_date < today:
                                 continue
+                            dni = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
                             for ev in day_events:
                                 events.append({
                                     "data": event_date.strftime("%Y-%m-%d"),
-                                    "tydzien": event_date.strftime("%A"),
+                                    "tydzien": dni[event_date.weekday()],
                                     "tytul": ev.title,
                                     "przedmiot": ev.subject,
                                     "godzina": ev.hour,
@@ -364,22 +365,107 @@ class LibrusApiClient:
 
     async def async_get_student_information(self):
         """Get student information from Librus."""
-        try:
-            if not self._client or not self._token:
-                if not await self.async_authenticate():
+        for attempt in range(2):
+            try:
+                if not self._client or not self._token:
+                    if not await self.async_authenticate():
+                        return None
+
+                from librus_apix.student_information import get_student_information
+
+                loop = asyncio.get_running_loop()
+                return await loop.run_in_executor(None, get_student_information, self._client)
+
+            except TokenError:
+                _LOGGER.warning(
+                    "Token expired fetching student information (attempt %d/2), re-authenticating...",
+                    attempt + 1,
+                )
+                self._reset_auth()
+                if attempt == 1:
+                    _LOGGER.error("Failed to get student information after re-authentication.")
+                    return None
+            except Exception as ex:
+                _LOGGER.error(
+                    "Failed to get student information (attempt %d/2): %s\n%s",
+                    attempt + 1, ex, traceback.format_exc(),
+                )
+                self._reset_auth()
+                if attempt == 1:
                     return None
 
-            from librus_apix.student_information import get_student_information
+    async def async_get_attendance(self):
+        """Get attendance from Librus."""
+        for attempt in range(2):
+            try:
+                if not self._client or not self._token:
+                    if not await self.async_authenticate():
+                        return None
 
-            loop = asyncio.get_running_loop()
-            return await loop.run_in_executor(None, get_student_information, self._client)
+                from librus_apix.attendance import get_attendance
+                loop = asyncio.get_running_loop()
+                attendance = await loop.run_in_executor(None, get_attendance, self._client)
+                
+                result = []
+                if attendance:
+                    for sem in attendance:
+                        for a in sem:
+                            result.append({
+                                "symbol": getattr(a, "symbol", ""),
+                                "typ": getattr(a, "type", ""),
+                                "data": getattr(a, "date", ""),
+                                "przedmiot": getattr(a, "subject", ""),
+                                "nauczyciel": getattr(a, "teacher", ""),
+                                "godzina": getattr(a, "period", 0)
+                            })
+                return result
+            except TokenError:
+                _LOGGER.warning("Token expired fetching attendance (attempt %d/2), re-authenticating...", attempt + 1)
+                self._reset_auth()
+                if attempt == 1:
+                    return None
+            except Exception as ex:
+                if type(ex).__name__ == "ParseError":
+                    return []
+                _LOGGER.error("Failed to get attendance (attempt %d/2): %s", attempt + 1, ex)
+                self._reset_auth()
+                if attempt == 1:
+                    return None
 
-        except Exception as ex:
-            _LOGGER.error(
-                "Failed to get student information: %s\n%s", ex, traceback.format_exc()
-            )
-            self._reset_auth()
-            return None
+    async def async_get_announcements(self):
+        """Get announcements from Librus."""
+        for attempt in range(2):
+            try:
+                if not self._client or not self._token:
+                    if not await self.async_authenticate():
+                        return None
+
+                from librus_apix.announcements import get_announcements
+                loop = asyncio.get_running_loop()
+                ann = await loop.run_in_executor(None, get_announcements, self._client)
+                
+                result = []
+                if ann:
+                    for a in ann:
+                        result.append({
+                            "tytul": getattr(a, "title", ""),
+                            "nadawca": getattr(a, "author", ""),
+                            "opis": getattr(a, "description", ""),
+                            "data": getattr(a, "date", "")
+                        })
+                return result
+            except TokenError:
+                _LOGGER.warning("Token expired fetching announcements (attempt %d/2), re-authenticating...", attempt + 1)
+                self._reset_auth()
+                if attempt == 1:
+                    return None
+            except Exception as ex:
+                if type(ex).__name__ == "ParseError":
+                    return []
+                _LOGGER.error("Failed to get announcements (attempt %d/2): %s", attempt + 1, ex)
+                self._reset_auth()
+                if attempt == 1:
+                    return None
 
 
 async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:
@@ -412,6 +498,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not await client.async_authenticate():
         _LOGGER.error("Failed to authenticate")
         return False
+    
+    from .sensor import LibrusDataUpdateCoordinator
+    coordinator = LibrusDataUpdateCoordinator(hass, client)
+    await coordinator.async_config_entry_first_refresh()
+    client.coordinator = coordinator
     
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = client

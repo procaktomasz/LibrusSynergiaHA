@@ -65,9 +65,7 @@ async def async_setup_entry(
 ) -> None:
     """Konfiguracja platformy czujnikow Librus APIX."""
     client = hass.data[DOMAIN][config_entry.entry_id]
-
-    coordinator = LibrusDataUpdateCoordinator(hass, client)
-    await coordinator.async_config_entry_first_refresh()
+    coordinator = client.coordinator
 
     entities: List[SensorEntity] = [
         LibrusUczenSensor(coordinator, config_entry),
@@ -77,6 +75,8 @@ async def async_setup_entry(
         LibrusZadaniaSensor(coordinator, config_entry),
         LibrusTerminarzSensor(coordinator, config_entry),
         LibrusPlanLekcjiSensor(coordinator, config_entry),
+        LibrusFrekwencjaSensor(coordinator, config_entry),
+        LibrusOgloszeniaSensor(coordinator, config_entry),
     ]
 
     # Tworz czujniki per przedmiot na podstawie pierwszego pobrania danych
@@ -126,6 +126,8 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
             homework_raw = await self.client.async_get_homework()
             schedule_raw = await self.client.async_get_schedule()
             plan_lekcji_raw = await self.client.async_get_timetable()
+            frekwencja_raw = await self.client.async_get_attendance()
+            ogloszenia_raw = await self.client.async_get_announcements()
 
             if grades is None:
                 # Zachowaj poprzednie dane o ocenach jesli dostepne, wiadomosci zaktualizuj jesli OK
@@ -157,6 +159,16 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                         if plan_lekcji_raw is not None
                         else prev.get("plan_lekcji", [])
                     ),
+                    "frekwencja": (
+                        frekwencja_raw
+                        if frekwencja_raw is not None
+                        else prev.get("frekwencja", [])
+                    ),
+                    "ogloszenia": (
+                        ogloszenia_raw
+                        if ogloszenia_raw is not None
+                        else prev.get("ogloszenia", [])
+                    ),
                 }
 
             # Grupuj oceny wg przedmiotu i oznacz nowe
@@ -178,6 +190,8 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
             zadania = self._build_zadania(homework_raw)
             terminarz = schedule_raw if schedule_raw is not None else []
             plan_lekcji = plan_lekcji_raw if plan_lekcji_raw is not None else []
+            frekwencja = frekwencja_raw if frekwencja_raw is not None else []
+            ogloszenia = ogloszenia_raw if ogloszenia_raw is not None else []
 
             result = {
                 "student_info": student_info,
@@ -187,6 +201,8 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 "zadania": zadania,
                 "terminarz": terminarz,
                 "plan_lekcji": plan_lekcji,
+                "frekwencja": frekwencja,
+                "ogloszenia": ogloszenia,
                 "semestr_biezacy": current_sem,
             }
 
@@ -724,20 +740,95 @@ class LibrusPlanLekcjiSensor(CoordinatorEntity, SensorEntity):
         data = self.coordinator.data or {}
         plan = data.get("plan_lekcji", [])
         
-        dzisiaj_idx = date.today().weekday()
-        
-        dzisiaj = []
-        jutro = []
+        dni_tygodnia = ["poniedzialek", "wtorek", "sroda", "czwartek", "piatek", "sobota", "niedziela"]
+        wynik = {}
         
         if plan and len(plan) == 7:
-            dzisiaj = plan[dzisiaj_idx]
+            for i, dzien in enumerate(dni_tygodnia):
+                wynik[dzien] = plan[i]
+        else:
+            for dzien in dni_tygodnia:
+                wynik[dzien] = []
+        
+        dzisiaj_idx = date.today().weekday()
+        
+        if plan and len(plan) == 7:
+            wynik["dzisiaj"] = plan[dzisiaj_idx]
             if dzisiaj_idx < 6:
-                jutro = plan[dzisiaj_idx + 1]
+                wynik["jutro"] = plan[dzisiaj_idx + 1]
             else:
-                jutro = [] # Na niedziele nie pobieramy poniedzialku z nowego tyg.
+                wynik["jutro"] = [] # Na niedziele nie pobieramy poniedzialku z nowego tyg.
+        else:
+            wynik["dzisiaj"] = []
+            wynik["jutro"] = []
             
+        return wynik
+
+
+class LibrusFrekwencjaSensor(CoordinatorEntity, SensorEntity):
+    """Czujnik frekwencji (nieobecnosci, spoznienia)."""
+
+    def __init__(self, coordinator: LibrusDataUpdateCoordinator, config_entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        self._attr_has_entity_name = False
+        self._attr_name = "Frekwencja"
+        self._attr_unique_id = f"{config_entry.entry_id}_frekwencja"
+        self._attr_icon = "mdi:account-check"
+
+    @property
+    def device_info(self) -> Dict[str, Any]:
+        return _device_info(self.coordinator, self._config_entry)
+
+    @property
+    def native_value(self) -> str:
+        data = self.coordinator.data or {}
+        frekwencja = data.get("frekwencja", [])
+        nieobecnosci = sum(1 for f in frekwencja if f.get("typ") in ["nb", "u"])
+        return str(nieobecnosci)
+
+    @property
+    def extra_state_attributes(self) -> Dict[str, Any]:
+        data = self.coordinator.data or {}
+        frekwencja = data.get("frekwencja", [])
+        
+        spoznienia = [f for f in frekwencja if f.get("typ") == "sp"]
+        nieobecnosci = [f for f in frekwencja if f.get("typ") in ["nb", "u"]]
+        
         return {
-            "dzisiaj": dzisiaj,
-            "jutro": jutro,
+            "lista_wpisow": frekwencja,
+            "liczba_spoznien": len(spoznienia),
+            "liczba_nieobecnosci": len(nieobecnosci),
+        }
+
+
+class LibrusOgloszeniaSensor(CoordinatorEntity, SensorEntity):
+    """Czujnik ogloszen szkolnych."""
+
+    def __init__(self, coordinator: LibrusDataUpdateCoordinator, config_entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        self._attr_has_entity_name = False
+        self._attr_name = "Ogloszenia"
+        self._attr_unique_id = f"{config_entry.entry_id}_ogloszenia"
+        self._attr_icon = "mdi:bulletin-board"
+
+    @property
+    def device_info(self) -> Dict[str, Any]:
+        return _device_info(self.coordinator, self._config_entry)
+
+    @property
+    def native_value(self) -> str:
+        data = self.coordinator.data or {}
+        ogloszenia = data.get("ogloszenia", [])
+        return str(len(ogloszenia))
+
+    @property
+    def extra_state_attributes(self) -> Dict[str, Any]:
+        data = self.coordinator.data or {}
+        ogloszenia = data.get("ogloszenia", [])
+        
+        return {
+            "lista_ogloszen": ogloszenia,
         }
 
