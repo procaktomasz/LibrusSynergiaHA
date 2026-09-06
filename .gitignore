@@ -134,4 +134,4 @@ config/.google.token
 Thumbs.db
 
 # Test credentials
-test_credentials.yaml
+test_credentials.yamlscratch/
