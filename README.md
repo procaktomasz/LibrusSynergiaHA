@@ -214,7 +214,7 @@ entity: todo.librus_imie_nazwisko_zadania_domowe_to_do
 title: ✅ Prace domowe
 ```
 
-### Karta ogłoszeń i frekwencji (Markdown)
+### Karta ogłoszeń szkolnych (Markdown)
 
 > **WAŻNE:** Pamiętaj, aby podmienić w kodzie `imie_nazwisko` na poprawne dane z Twoich encji!
 
@@ -224,13 +224,11 @@ title: 📢 Szkolne Aktualności
 content: |
   {% set profil = 'imie_nazwisko' %}
   {% set encja_ogl = 'sensor.librus_' ~ profil ~ '_ogloszenia' %}
-  {% set encja_frek = 'sensor.librus_' ~ profil ~ '_frekwencja' %}
   {% set ogl = state_attr(encja_ogl, 'lista_ogloszen') %}
 
   {% if ogl == none %}
   ⚠️ **Błąd:** Nie znaleziono encji dla profilu `{{ profil }}`.
   {% else %}
-  **Bieżące Ogłoszenia:**
   {% if ogl | length > 0 %}
   {% for o in ogl %}
   - **{{ o.data }} ({{ o.nadawca }})**: {{ o.tytul }} - {{ o.opis }}
@@ -238,12 +236,25 @@ content: |
   {% else %}
   Brak nowych ogłoszeń.
   {% endif %}
+  {% endif %}
+```
 
-  ***
+### Karta statystyk frekwencji (Markdown)
 
-  **Statystyki Frekwencji:**
-  - Spóźnienia: {{ state_attr(encja_frek, 'liczba_spoznien') | default(0) }}
-  - Nieobecności: {{ state_attr(encja_frek, 'liczba_nieobecnosci') | default(0) }}
+> **WAŻNE:** Pamiętaj, aby podmienić w kodzie `imie_nazwisko` na poprawne dane z Twoich encji!
+
+```yaml
+type: markdown
+title: 📊 Statystyki Frekwencji
+content: |
+  {% set profil = 'imie_nazwisko' %}
+  {% set encja_frek = 'sensor.librus_' ~ profil ~ '_frekwencja' %}
+
+  {% if states(encja_frek) in ['unavailable', 'unknown'] %}
+  ⚠️ **Błąd:** Nie znaleziono encji dla profilu `{{ profil }}`.
+  {% else %}
+  - **Spóźnienia:** {{ state_attr(encja_frek, 'liczba_spoznien') | default(0) }}
+  - **Nieobecności:** {{ state_attr(encja_frek, 'liczba_nieobecnosci') | default(0) }}
   {% endif %}
 ```
 
