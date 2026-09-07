@@ -366,7 +366,9 @@ automation:
 
 ## Zaawansowane: Harmonogram odpytywania Librusa
 
-Domyślnie integracja sprawdza nowości w Librusie co 2 godziny przez całą dobę. Jeśli chcesz oszczędzać zasoby lub odpytywać dziennik wyłącznie w wybranych godzinach (np. od 08:00 do 20:00) i wykluczyć weekendy, skorzystaj z natywnej automatyzacji Home Assistanta.
+Domyślnie integracja sprawdza nowości w Librusie co 2 godziny przez całą dobę. Jeśli chcesz oszczędzać zasoby lub odpytywać dziennik wyłącznie w wybranych godzinach (np. od 08:00 do 20:00) i wykluczyć weekendy, skorzystaj z natywnej automatyzacji Home Assistanta. 
+
+> ⚠️ **UWAGA:** Uważaj na to, jak często odpytujesz serwery! Zbyt częste pobieranie danych (np. co 5 czy 10 minut) generuje ogromny ruch sieciowy i może zostać potraktowane przez filtry antyspamowe systemu Librus jako atak DDoS, co skutkuje tymczasową blokadą Twojego adresu IP lub nawet bana na konto! Zalecany odstęp to minimum 1 godzina.
 
 1. Przejdź do **Ustawienia -> Urządzenia oraz usługi -> Librus Synergia HA**.
 2. Kliknij ikonę trzech kropek przy integracji i wybierz **Opcje systemowe**.
