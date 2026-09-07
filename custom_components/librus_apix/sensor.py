@@ -683,6 +683,7 @@ class LibrusWiadomosciSensor(CoordinatorEntity, SensorEntity):
                 "nieprzeczytana": m.get("unread", False),
                 "jest_nowa": m.get("jest_nowa", False),
                 "ma_zalacznik": m.get("has_attachment", False),
+                "tresc": m.get("content", ""),
             }
             for m in msgs
         ]
@@ -696,6 +697,7 @@ class LibrusWiadomosciSensor(CoordinatorEntity, SensorEntity):
                 "nieprzeczytana": False,
                 "jest_nowa": False,
                 "ma_zalacznik": False,
+                "tresc": "",
             })
 
         return {

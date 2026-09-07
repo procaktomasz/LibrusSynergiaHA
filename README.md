@@ -414,3 +414,36 @@ Projekt w warstwie komunikacyjnej korzysta z biblioteki [librus-apix](https://gi
 ---
 
 **⭐ Jeśli podoba Ci się projekt, zostaw gwiazdkę na GitHub!**
+
+## Zaawansowane: Harmonogram odpytywania Librusa
+
+Domyślnie integracja sprawdza nowości w Librusie co 2 godziny przez całą dobę. Jeśli chcesz oszczędzać zasoby lub odpytywać dziennik wyłącznie w wybranych godzinach (np. od 08:00 do 20:00) i wykluczyć weekendy, skorzystaj z natywnej automatyzacji Home Assistanta.
+
+1. Przejdź do **Ustawienia -> Urządzenia oraz usługi -> Librus Synergia HA**.
+2. Kliknij ikonę trzech kropek przy integracji i wybierz **Opcje systemowe**.
+3. **Wyłącz** opcję "Włącz odpytywanie w poszukiwaniu aktualizacji".
+4. Utwórz nową automatyzację w HA używając poniższego kodu YAML (zmień encję w sekcji akcji na jedną ze swoich encji Librusa):
+
+```yaml
+alias: "Librus - Dynamiczne Odpytywanie"
+description: "Odpytuje API Librusa co 1 godzinę, tylko w dni robocze od 8 do 20."
+mode: single
+trigger:
+  - platform: time_pattern
+    hours: "/1"
+condition:
+  - condition: time
+    after: "08:00:00"
+    before: "20:00:00"
+    weekday:
+      - mon
+      - tue
+      - wed
+      - thu
+      - fri
+action:
+  - service: homeassistant.update_entity
+    target:
+      entity_id: sensor.librus_twoje_dane_ogloszenia
+```
+Wywołanie odświeżenia jednej encji (np. ogłoszeń) automatycznie zaktualizuje wszystkie pozostałe sensory.

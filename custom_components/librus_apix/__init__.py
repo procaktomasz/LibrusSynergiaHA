@@ -49,10 +49,11 @@ CONFIG_SCHEMA = vol.Schema(
 class LibrusApiClient:
     """Class to interface with the Librus API."""
 
-    def __init__(self, username: str, password: str):
+    def __init__(self, username: str, password: str, options: dict = None):
         """Initialize the client."""
         self.username = username
         self.password = password
+        self.options = options or {}
         self._client: Client = None
         self._token = None
         self._auth_lock = asyncio.Lock()
@@ -165,14 +166,17 @@ class LibrusApiClient:
                         return None
                 client = self._client
 
-                from librus_apix.messages import get_received
+                from librus_apix.messages import get_received, message_content
 
                 loop = asyncio.get_running_loop()
                 messages = await loop.run_in_executor(None, get_received, client, 0)
                 messages = messages[:count] if messages else []
+                
+                fetch_content = self.options.get("fetch_messages_content", False)
 
-                result = [
-                    {
+                result = []
+                for msg in messages:
+                    msg_dict = {
                         "author": msg.author,
                         "title": msg.title,
                         "date": msg.date,
@@ -180,8 +184,15 @@ class LibrusApiClient:
                         "unread": msg.unread,
                         "has_attachment": msg.has_attachment,
                     }
-                    for msg in messages
-                ]
+                    if fetch_content:
+                        try:
+                            content = await loop.run_in_executor(None, message_content, client, msg.href)
+                            msg_dict["content"] = content
+                        except Exception as e:
+                            _LOGGER.warning("Could not fetch content for message %s: %s", msg.href, e)
+                            msg_dict["content"] = None
+                    
+                    result.append(msg_dict)
 
                 return result
 
@@ -510,13 +521,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Librus APIX from a config entry."""
     username = entry.data[CONF_USERNAME]
     password = entry.data[CONF_PASSWORD]
+    options = entry.options
     
-    client = LibrusApiClient(username, password)
+    client = LibrusApiClient(username, password, options)
     
     # Test authentication
     if not await client.async_authenticate():
         _LOGGER.error("Failed to authenticate")
         return False
+    
+    entry.async_on_unload(entry.add_update_listener(update_listener))
     
     from .sensor import LibrusDataUpdateCoordinator
     coordinator = LibrusDataUpdateCoordinator(hass, client)
@@ -540,3 +554,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
     
     return unload_ok
+
+async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Handle options update."""
+    await hass.config_entries.async_reload(entry.entry_id)
