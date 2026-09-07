@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Librus APIX Integration Setup",
+        "description": "Enter your Librus Synergia login credentials",
+        "data": {
+          "username": "Username/Login",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Librus. Please check your credentials.",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "Device is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Librus APIX Settings",
+        "description": "Configure additional options for the integration.",
+        "data": {
+          "fetch_messages_content": "Fetch full message content (Marks them as read in Librus system!)"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Konfiguracja integracji Librus APIX",
+        "description": "Wprowadź swoje dane logowania do systemu Librus Synergia",
+        "data": {
+          "username": "Użytkownik/Login",
+          "password": "Hasło"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nie udało się połączyć z Librusem. Sprawdź swoje dane logowania.",
+      "unknown": "Wystąpił nieoczekiwany błąd"
+    },
+    "abort": {
+      "already_configured": "To urządzenie jest już skonfigurowane"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ustawienia Librus APIX",
+        "description": "Skonfiguruj dodatkowe opcje działania integracji.",
+        "data": {
+          "fetch_messages_content": "Pobieraj pełną treść wiadomości (Oznacza je jako przeczytane w systemie Librus!)"
+        }
+      }
+    }
+  }
+}
