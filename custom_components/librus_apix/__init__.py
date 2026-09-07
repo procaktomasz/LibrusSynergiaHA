@@ -186,8 +186,9 @@ class LibrusApiClient:
                     }
                     if fetch_content:
                         try:
-                            content = await loop.run_in_executor(None, message_content, client, msg.href)
-                            msg_dict["content"] = content
+                            msg_data = await loop.run_in_executor(None, message_content, client, msg.href)
+                            content_str = msg_data.content if hasattr(msg_data, 'content') else str(msg_data)
+                            msg_dict["content"] = content_str.replace("\n", "<br>") if isinstance(content_str, str) else content_str
                         except Exception as e:
                             _LOGGER.warning("Could not fetch content for message %s: %s", msg.href, e)
                             msg_dict["content"] = None
