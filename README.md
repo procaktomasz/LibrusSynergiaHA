@@ -135,6 +135,40 @@ Legenda ikon:
 - ⚫ szara = przeczytana
 - 📎 = ma załącznik
 
+### Karta wiadomości (Markdown - Pełna treść)
+
+> **WAŻNE:** Aby poniższa karta działała poprawnie, musisz najpierw wejść w Ustawienia -> Urządzenia oraz usługi -> Librus Synergia HA -> kliknąć **Konfiguruj** i włączyć opcję *"Pobieraj pełną treść wiadomości"*. W przeciwnym razie treść będzie pusta.
+
+```yaml
+type: markdown
+title: ✉️ Wiadomości Librus (Z treścią)
+content: |
+  {% set profil = 'imie_nazwisko' %}
+  {% set encja = 'sensor.librus_' ~ profil ~ '_wiadomosci' %}
+  {% set msgs = state_attr(encja, 'wiadomosci') %}
+
+  {% if msgs == none %}
+  ❌ **Błąd:** Nie znaleziono encji `{{ encja }}`. Sprawdź wpisany profil!
+  {% else %}
+  {% set nieprzeczytane = state_attr(encja, 'liczba_nieprzeczytanych') | default(0) %}
+  **Status:** {% if nieprzeczytane > 0 %}🔴 {{ nieprzeczytane }} nieprzeczytanych{% else %}🟢 Wszystkie przeczytane{% endif %}
+
+  ***
+  {% if msgs %}
+  {% for m in msgs %}
+  {% if m.temat != 'Brak' %}
+  **{{ m.data }}** | {{ m.nadawca }}
+  > {% if m.nieprzeczytana %}🔴{% else %}⚫{% endif %} **{{ m.temat }}** {% if m.ma_zalacznik %}📎{% endif %}
+  > 
+  > {{ m.tresc | default('Brak pobranej treści') }}
+
+  <br>
+  {% endif %}
+  {% endfor %}
+  {% endif %}
+  {% endif %}
+```
+
 ### Karta terminarza (wszystkie zdarzenia)
 
 > **WAŻNE:** Znajdź nazwę encji w **Developer Tools → States** (szukaj `terminarz`).
