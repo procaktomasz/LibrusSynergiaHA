@@ -86,7 +86,7 @@ class LibrusApixOptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
+        self.entry = config_entry
 
     async def async_step_init(
         self, user_input: dict | None = None
@@ -99,7 +99,7 @@ class LibrusApixOptionsFlowHandler(config_entries.OptionsFlow):
             {
                 vol.Optional(
                     "fetch_messages_content",
-                    default=self.config_entry.options.get("fetch_messages_content", False),
+                    default=self.entry.options.get("fetch_messages_content", False),
                 ): bool,
             }
         )
