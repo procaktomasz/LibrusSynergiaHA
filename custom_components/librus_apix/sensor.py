@@ -224,7 +224,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                         (zdarzenie["data"], zdarzenie["tytul"], zdarzenie["przedmiot"])
                     )
             else:
-                uczen = student_info.get("imie_i_nazwisko", "Nieznany uczeń") if student_info else "Nieznany uczeń"
+                uczen = student_info.name if student_info else "Nieznany uczeń"
                 self._fire_events(wiadomosci, grades, uczen)
                 self._fire_homework_events(zadania, uczen)
                 self._fire_schedule_events(terminarz, uczen)
