@@ -8,7 +8,7 @@ Integracja Home Assistant z systemem Librus Synergia, umożliwiająca monitorowa
 - 📊 **Monitoring ocen** - wszystkie oceny ze wszystkich przedmiotów
 - 📈 **Statystyki** - średnie ocen, liczba ocen, trend
 - 📧 **Wiadomości** - najnowsze wiadomości z dziennika
-- 📅 **Kalendarze** - wbudowany plan lekcji i terminarz w HA
+- 📅 **Kalendarze** - wbudowany plan lekcji (z obsługą zastępstw!) i terminarz w HA
 - ✅ **Zadania domowe** - wsparcie dla systemowych list To-Do
 - 📢 **Ogłoszenia** - odczyt szkolnej tablicy ogłoszeń
 - 👨‍🎓 **Frekwencja** - monitorowanie spóźnień i nieobecności
@@ -294,7 +294,7 @@ content: |
 
 ### Karta pełnego Planu Lekcji (7 dni) na własnym szablonie Markdown
 
-> **WAŻNE:** Zastąp `sensor.librus_imie_nazwisko_plan_lekcji` poprawną encją z Twojego panelu (Developer Tools → States)!
+> **WAŻNE:** Zastąp `sensor.librus_imie_nazwisko_plan_lekcji` poprawną encją z Twojego panelu (Developer Tools → States)! Zastępstwa są automatycznie oznaczane w tabeli czytelną strzałką (np. `stara lekcja ➔ nowa lekcja`).
 
 ```yaml
 type: markdown
@@ -349,7 +349,7 @@ Zdarzenia są wykrywane przy każdym odświeżeniu (co 2h). Pierwsze uruchomieni
 ### 📬 Powiadomienie o nowej wiadomości
 
 Zdarzenie: `librus_apix_nowa_wiadomosc`  
-Dostępne dane: `nadawca`, `temat`, `data`, `ma_zalacznik`
+Dostępne dane: `uczen` (Imię i Nazwisko z profilu), `nadawca`, `temat`, `data`, `ma_zalacznik`
 
 > **Uwaga:** Treść wiadomości nie jest pobierana celowo — aby nie oznaczać wiadomości jako przeczytanych w Librusie.
 
@@ -364,18 +364,19 @@ automation:
         data:
           title: "📬 Librus: nowa wiadomość"
           message: >-
+            Dotyczy: {{ trigger.event.data.uczen | default('Dziecko') }}
             {% set msg = state_attr('sensor.librus_IMIE_NAZWISKO_wiadomosci', 'wiadomosci')
                | selectattr('nieprzeczytana', 'equalto', true) | list | first | default({}) %}
             Od: {{ msg.nadawca | default('nieznany') }}
             Temat: {{ msg.temat | default('brak') }}
 ```
 
-> **Uwaga:** Zamień `sensor.librus_IMIE_NAZWISKO_wiadomosci` na nazwę swojego sensora widoczną w Developer Tools → States.
+> **Uwaga:** Powyższa wiadomość korzysta z globalnego parametru `uczen`, dzięki czemu od razu wiadomo, którego profilu dotyczy powiadomienie. Zamień w kodzie `sensor.librus_IMIE_NAZWISKO_wiadomosci` na nazwę swojego sensora, jeśli chcesz pobrać więcej szczegółów z atrybutów.
 
 ### 📝 Powiadomienie o nowej ocenie
 
 Zdarzenie: `librus_apix_nowa_ocena`  
-Dostępne dane: `przedmiot`, `ocena`, `data`, `kategoria`, `nauczyciel`
+Dostępne dane: `uczen` (Imię i Nazwisko z profilu), `przedmiot`, `ocena`, `data`, `kategoria`, `nauczyciel`
 
 ```yaml
 automation:
@@ -386,7 +387,7 @@ automation:
     action:
       - service: notify.mobile_app_NAZWA_TWOJEGO_TELEFONU
         data:
-          title: "🎓 Librus: nowa ocena {{ trigger.event.data.ocena }}"
+          title: "🎓 {{ trigger.event.data.uczen }} - nowa ocena {{ trigger.event.data.ocena }}"
           message: >-
             {{ trigger.event.data.przedmiot }}
             Ocena: {{ trigger.event.data.ocena }}
