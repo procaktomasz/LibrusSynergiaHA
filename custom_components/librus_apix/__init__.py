@@ -363,9 +363,13 @@ class LibrusApiClient:
                             if period.info:
                                 for info_val in period.info.values():
                                     if isinstance(info_val, dict):
+                                        subject = subject.strip().replace("\n", " ")
+                                        teacher_and_classroom = teacher_and_classroom.strip()
+
                                         subject_swap = info_val.get("subject_swap", "").strip()
-                                        if subject_swap and subject_swap.lower() != subject.lower():
-                                            subject = f"{subject_swap} ➔ {subject}"
+                                        old_subject = subject_swap.split("->")[0].strip() if "->" in subject_swap else subject_swap
+                                        if old_subject and old_subject.lower() != subject.lower():
+                                            subject = f"{old_subject} ➔ {subject}"
                                         
                                         teacher_swap = info_val.get("teacher_swap", "").strip()
                                         classroom_swap = info_val.get("classroom_swap", "").strip()
@@ -375,13 +379,20 @@ class LibrusApiClient:
                                         curr_room = tc_parts[1].strip() if len(tc_parts) > 1 else ""
                                         
                                         new_teacher = curr_teacher
-                                        if teacher_swap and teacher_swap != curr_teacher:
-                                            new_teacher = f"({teacher_swap} ➔ {curr_teacher})"
-                                            
+                                        if teacher_swap:
+                                            old_teacher = teacher_swap.split("->")[0].strip() if "->" in teacher_swap else teacher_swap
+                                            if old_teacher and not curr_teacher.startswith(old_teacher):
+                                                new_teacher = f"({old_teacher} ➔ {curr_teacher})"
+                                                
                                         new_room = curr_room
-                                        if classroom_swap and classroom_swap != curr_room:
-                                            new_room = f"({classroom_swap} ➔ {curr_room})"
-                                            
+                                        if classroom_swap:
+                                            old_room = classroom_swap.split("->")[0].strip() if "->" in classroom_swap else classroom_swap
+                                            if old_room and old_room != curr_room:
+                                                if not curr_room or curr_room == "[brak]":
+                                                    new_room = f"({old_room} ➔ brak)"
+                                                else:
+                                                    new_room = f"({old_room} ➔ {curr_room})"
+                                                
                                         if new_teacher and new_room:
                                             teacher_and_classroom = f"{new_teacher} - {new_room}"
                                         elif new_teacher:
