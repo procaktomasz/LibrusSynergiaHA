@@ -357,9 +357,42 @@ class LibrusApiClient:
                     day_list = []
                     for period in day:
                         if period.subject:
+                            subject = period.subject
+                            teacher_and_classroom = period.teacher_and_classroom
+
+                            if period.info:
+                                for info_val in period.info.values():
+                                    if isinstance(info_val, dict):
+                                        subject_swap = info_val.get("subject_swap", "").strip()
+                                        if subject_swap and subject_swap.lower() != subject.lower():
+                                            subject = f"{subject_swap} ➔ {subject}"
+                                        
+                                        teacher_swap = info_val.get("teacher_swap", "").strip()
+                                        classroom_swap = info_val.get("classroom_swap", "").strip()
+                                        
+                                        tc_parts = teacher_and_classroom.rsplit("-", 1)
+                                        curr_teacher = tc_parts[0].strip()
+                                        curr_room = tc_parts[1].strip() if len(tc_parts) > 1 else ""
+                                        
+                                        new_teacher = curr_teacher
+                                        if teacher_swap and teacher_swap != curr_teacher:
+                                            new_teacher = f"({teacher_swap} ➔ {curr_teacher})"
+                                            
+                                        new_room = curr_room
+                                        if classroom_swap and classroom_swap != curr_room:
+                                            new_room = f"({classroom_swap} ➔ {curr_room})"
+                                            
+                                        if new_teacher and new_room:
+                                            teacher_and_classroom = f"{new_teacher} - {new_room}"
+                                        elif new_teacher:
+                                            teacher_and_classroom = new_teacher
+                                        elif new_room:
+                                            teacher_and_classroom = f"Sala {new_room}"
+                                        break
+
                             day_list.append({
-                                "przedmiot": period.subject,
-                                "nauczyciel_i_sala": period.teacher_and_classroom,
+                                "przedmiot": subject,
+                                "nauczyciel_i_sala": teacher_and_classroom,
                                 "godzina_od": period.date_from,
                                 "godzina_do": period.date_to,
                                 "data": period.date or day_date,

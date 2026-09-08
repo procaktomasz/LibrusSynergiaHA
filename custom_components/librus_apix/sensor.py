@@ -224,9 +224,10 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                         (zdarzenie["data"], zdarzenie["tytul"], zdarzenie["przedmiot"])
                     )
             else:
-                self._fire_events(wiadomosci, grades)
-                self._fire_homework_events(zadania)
-                self._fire_schedule_events(terminarz)
+                uczen = student_info.get("imie_i_nazwisko", "Nieznany uczeń") if student_info else "Nieznany uczeń"
+                self._fire_events(wiadomosci, grades, uczen)
+                self._fire_homework_events(zadania, uczen)
+                self._fire_schedule_events(terminarz, uczen)
 
             return result
 
@@ -235,7 +236,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
         except Exception as err:
             raise UpdateFailed(f"Blad komunikacji z API: {err}") from err
 
-    def _fire_events(self, messages: List[Dict], grades: List[Dict]) -> None:
+    def _fire_events(self, messages: List[Dict], grades: List[Dict], uczen: str) -> None:
         """Wyslij zdarzenia HA dla nowych wiadomosci i ocen."""
         for msg in messages:
             href = msg.get("href", "")
@@ -245,6 +246,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 self.hass.bus.fire(
                     EVENT_NOWA_WIADOMOSC,
                     {
+                        "uczen": uczen,
                         "nadawca": msg.get("author", ""),
                         "temat": msg.get("title", ""),
                         "data": msg.get("date", ""),
@@ -260,6 +262,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 self.hass.bus.fire(
                     EVENT_NOWA_OCENA,
                     {
+                        "uczen": uczen,
                         "przedmiot": grade["subject"],
                         "ocena": grade["grade"],
                         "data": grade["date"],
@@ -268,7 +271,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                     },
                 )
 
-    def _fire_schedule_events(self, terminarz: List[Dict]) -> None:
+    def _fire_schedule_events(self, terminarz: List[Dict], uczen: str) -> None:
         """Wyslij zdarzenia HA dla nowych zdarzen w kalendarzu."""
         for zdarzenie in terminarz:
             ev_id = (zdarzenie["data"], zdarzenie["tytul"], zdarzenie["przedmiot"])
@@ -278,6 +281,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 self.hass.bus.fire(
                     EVENT_NOWE_ZDARZENIE,
                     {
+                        "uczen": uczen,
                         "data": zdarzenie["data"],
                         "tytul": zdarzenie["tytul"],
                         "przedmiot": zdarzenie["przedmiot"],
@@ -311,7 +315,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
         ]
         return sorted(zadania, key=lambda z: z["termin"])
 
-    def _fire_homework_events(self, zadania: List[Dict]) -> None:
+    def _fire_homework_events(self, zadania: List[Dict], uczen: str) -> None:
         """Wyslij zdarzenia HA dla nowych zadan/sprawdzianow."""
         for zadanie in zadania:
             hw_id = (zadanie["przedmiot"], zadanie["termin"], zadanie["kategoria"])
@@ -321,6 +325,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 self.hass.bus.fire(
                     EVENT_NOWE_ZADANIE,
                     {
+                        "uczen": uczen,
                         "przedmiot": zadanie["przedmiot"],
                         "kategoria": zadanie["kategoria"],
                         "termin": zadanie["termin"],
