@@ -129,47 +129,22 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
             frekwencja_raw = await self.client.async_get_attendance()
             ogloszenia_raw = await self.client.async_get_announcements()
 
+            prev = self.data or {}
+
             if grades is None:
-                # Zachowaj poprzednie dane o ocenach jesli dostepne, wiadomosci zaktualizuj jesli OK
-                prev = self.data or {}
-                if not prev.get("oceny"):
-                    raise UpdateFailed("Nie udalo sie pobrac ocen i brak danych w cache")
-                _LOGGER.warning("Nie udalo sie pobrac ocen - uzywam poprzednich danych z cache")
-                return {
-                    "student_info": student_info or prev.get("student_info"),
-                    "oceny": prev.get("oceny", []),
-                    "oceny_wg_przedmiotu": prev.get("oceny_wg_przedmiotu", {}),
-                    "wiadomosci": (
-                        self._build_wiadomosci(messages)
-                        if messages is not None
-                        else prev.get("wiadomosci", [])
-                    ),
-                    "zadania": (
-                        self._build_zadania(homework_raw)
-                        if homework_raw is not None
-                        else prev.get("zadania", [])
-                    ),
-                    "terminarz": (
-                        schedule_raw
-                        if schedule_raw is not None
-                        else prev.get("terminarz", [])
-                    ),
-                    "plan_lekcji": (
-                        plan_lekcji_raw
-                        if plan_lekcji_raw is not None
-                        else prev.get("plan_lekcji", [])
-                    ),
-                    "frekwencja": (
-                        frekwencja_raw
-                        if frekwencja_raw is not None
-                        else prev.get("frekwencja", [])
-                    ),
-                    "ogloszenia": (
-                        ogloszenia_raw
-                        if ogloszenia_raw is not None
-                        else prev.get("ogloszenia", [])
-                    ),
-                }
+                # Brak ocen moze oznaczac tymczasowy blad, ale rowniez konto bez
+                # dostepu do dziennika ocen (np. konto przedszkolaka) - w obu
+                # przypadkach nie blokujemy konfiguracji integracji, tylko
+                # uzywamy danych z cache (jesli sa) lub pustej listy.
+                _LOGGER.warning(
+                    "Nie udalo sie pobrac ocen w tym cyklu - uzywam danych z cache "
+                    "(jesli sa) lub pustej listy. Jesli blad sie powtarza, konto moze "
+                    "nie miec dostepu do dziennika ocen (np. konto przedszkolaka)."
+                )
+                grades = prev.get("oceny", [])
+
+            if student_info is None:
+                student_info = prev.get("student_info")
 
             # Grupuj oceny wg przedmiotu i oznacz nowe
             oceny_wg_przedmiotu: Dict[str, List[Dict]] = {}
@@ -186,12 +161,20 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                     "jest_nowa": _jest_nowa(grade["date"]),
                 })
 
-            wiadomosci = self._build_wiadomosci(messages)
-            zadania = self._build_zadania(homework_raw)
-            terminarz = schedule_raw if schedule_raw is not None else []
-            plan_lekcji = plan_lekcji_raw if plan_lekcji_raw is not None else []
-            frekwencja = frekwencja_raw if frekwencja_raw is not None else []
-            ogloszenia = ogloszenia_raw if ogloszenia_raw is not None else []
+            wiadomosci = (
+                self._build_wiadomosci(messages)
+                if messages is not None
+                else prev.get("wiadomosci", [])
+            )
+            zadania = (
+                self._build_zadania(homework_raw)
+                if homework_raw is not None
+                else prev.get("zadania", [])
+            )
+            terminarz = schedule_raw if schedule_raw is not None else prev.get("terminarz", [])
+            plan_lekcji = plan_lekcji_raw if plan_lekcji_raw is not None else prev.get("plan_lekcji", [])
+            frekwencja = frekwencja_raw if frekwencja_raw is not None else prev.get("frekwencja", [])
+            ogloszenia = ogloszenia_raw if ogloszenia_raw is not None else prev.get("ogloszenia", [])
 
             result = {
                 "student_info": student_info,
