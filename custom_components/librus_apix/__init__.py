@@ -57,9 +57,29 @@ class LibrusApiClient:
         self._client: Client = None
         self._token = None
         self._auth_lock = asyncio.Lock()
+        # Ogranicza liczbe ponownych logowan w ramach jednego cyklu odswiezania danych.
+        # Bez tego kazdy z pobieranych zasobow (oceny, wiadomosci, plan lekcji, itd.)
+        # probowalby logowac sie od nowa nawet gdy przyczyna bledu nie jest wygasly
+        # token tylko brak dostepu do danego zasobu (np. konto przedszkolaka bez
+        # dziennika ocen), co generowaloby kilkanascie zbednych logowan na cykl.
+        self._reauth_budget = 1
+
+    def start_update_cycle(self) -> None:
+        """Zresetuj limit ponownych logowan na poczatku nowego cyklu odswiezania."""
+        self._reauth_budget = 1
 
     def _reset_auth(self) -> None:
-        """Reset authentication state to force re-authentication on next call."""
+        """Reset authentication state to force re-authentication on next call.
+
+        Ograniczone do jednego dodatkowego logowania na cykl odswiezania - patrz
+        `_reauth_budget`.
+        """
+        if self._reauth_budget <= 0:
+            _LOGGER.debug(
+                "Limit ponownych logowan w tym cyklu wyczerpany - pomijanie kolejnej autoryzacji"
+            )
+            return
+        self._reauth_budget -= 1
         self._client = None
         self._token = None
 
