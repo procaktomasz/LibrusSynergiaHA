@@ -137,3 +137,6 @@ Thumbs.db
 test_credentials.yaml
 scratch/
 scripts/
+
+# Pliki konfiguracyjne Asystenta AI
+AGENTS.md

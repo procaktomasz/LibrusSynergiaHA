@@ -52,9 +52,9 @@ class LibrusHomeworkTodoList(CoordinatorEntity, TodoListEntity):
         
         items = []
         for z in zadania:
-            przedmiot = z.get("przedmiot", "Brak")
-            tresc = z.get("tresc", "")
-            data_str = z.get("data", "")
+            przedmiot = z.get("lekcja", "") or z.get("przedmiot", "Brak")
+            tresc = z.get("przedmiot", "")
+            data_str = z.get("termin", "")
             
             # Generowanie bezpiecznego UID zadania (Librus nie zwraca unikalnego ID dla zadania)
             uid_str = f"{przedmiot}-{data_str}-{tresc}"
@@ -63,16 +63,16 @@ class LibrusHomeworkTodoList(CoordinatorEntity, TodoListEntity):
             due_date = None
             if data_str and data_str != "Brak daty":
                 try:
-                    due_date = datetime.strptime(data_str, "%Y-%m-%d").date()
+                    due_date = datetime.strptime(data_str[:10], "%Y-%m-%d").date()
                 except ValueError:
                     pass
             
             items.append(TodoItem(
-                summary=f"[{przedmiot}]",
+                summary=f"[{przedmiot}] {tresc}".strip(),
                 uid=uid,
                 status=TodoItemStatus.NEEDS_ACTION,
                 due=due_date,
-                description=tresc
+                description=z.get("nauczyciel", "")
             ))
             
         return items
