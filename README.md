@@ -472,7 +472,8 @@ Pull requesty są mile widziane! Sprawdź [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ### 🙏 Podziękowania
 
-Specjalne podziękowania dla **KB** za wsparcie i pomoc w rozwoju projektu.
+Specjalne podziękowania dla **KB** za wsparcie i pomoc w rozwoju projektu.  
+Ogromne podziękowania dla **@km4lin** za cenną kontrybucję i naprawę błędu blokującego integrację dla kont bez dziennika ocen!
 
 ## 👨‍💻 Autorzy i podziękowania
 
