@@ -466,10 +466,6 @@ Jeśli znajdziesz błąd:
 
 MIT License - patrz [LICENSE](LICENSE)
 
-## 🤝 Wkład
-
-Pull requesty są mile widziane! Sprawdź [CONTRIBUTING.md](CONTRIBUTING.md)
-
 ### 🙏 Podziękowania
 
 Specjalne podziękowania dla **KB** za wsparcie i pomoc w rozwoju projektu.  
