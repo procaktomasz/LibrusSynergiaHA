@@ -316,6 +316,46 @@ class LibrusApiClient:
                 if attempt == 1:
                     return None
 
+    async def async_get_dzd(self, date_from: str, date_to: str):
+        """Pobierz zajęcia dodatkowe (DZD) z gateway API.
+
+        Osobny endpoint /gateway/api/2.0/Timetables/OtherActivitiesRegister,
+        którego biblioteka librus-apix nie zna. Autoryzacja jak w
+        get_gateway_attendance: świeży oauth, potem client.get. Best-effort —
+        przy dowolnym błędzie zwraca [] (plan pokaże się bez DZD).
+        """
+        try:
+            if not self._client or not self._token:
+                if not await self.async_authenticate():
+                    return []
+            client = self._client
+            loop = asyncio.get_running_loop()
+
+            def _fetch():
+                oauth = client.refresh_oauth()
+                if oauth:
+                    client.cookies["oauth_token"] = oauth
+                url = (
+                    "%s/gateway/api/2.0/Timetables/OtherActivitiesRegister"
+                    "?dateFrom=%s&dateTo=%s&hideOutdatedEntries=false"
+                    % (client.BASE_URL, date_from, date_to)
+                )
+                resp = client.get(url)
+                payload = resp.json() or {}
+                data = payload.get("data")
+                if data is None:
+                    _LOGGER.warning(
+                        "DZD: brak pola 'data' (HTTP %s): %s",
+                        getattr(resp, "status_code", "?"), str(payload)[:200],
+                    )
+                    return []
+                return data
+
+            return await loop.run_in_executor(None, _fetch)
+        except Exception as dzd_ex:
+            _LOGGER.warning("DZD: nie udało się pobrać zajęć dodatkowych: %s", dzd_ex)
+            return []
+
     async def async_get_timetable(self):
         """Get timetable (plan lekcji) from Librus."""
         for attempt in range(2):
@@ -338,10 +378,17 @@ class LibrusApiClient:
                     tt1 = get_timetable(client, datetime.combine(monday, datetime.min.time()))
                     tt2 = get_timetable(client, datetime.combine(next_monday, datetime.min.time()))
                     return tt1 + tt2
-                    
+
+                # LOCAL PATCH (DZD): zajęcia dodatkowe idą osobnym gateway-endpointem
+                # (async_get_dzd). Sekwencyjnie po planie — obie funkcje dzielą tę samą
+                # sesję requests klienta, więc nie wolno ich puścić równolegle.
                 timetable = await loop.run_in_executor(None, _fetch_two_weeks)
+                d_from = monday.strftime("%Y-%m-%d")
+                d_to = (next_monday + timedelta(days=6)).strftime("%Y-%m-%d")
+                dzd_events = await self.async_get_dzd(d_from, d_to)
 
                 result = []
+                hour_to_num = {}
                 dni_nazwy = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
                 
                 # We have 14 days starting from 'monday'
@@ -409,11 +456,49 @@ class LibrusApiClient:
                                 "data": period.date or day_date,
                                 "numer": period.number,
                             })
+                            if period.date_from and period.number is not None:
+                                hour_to_num.setdefault(period.date_from, period.number)
                     result.append({
                         "dzien_tygodnia": dzien_tyg,
                         "data": day_date,
                         "lekcje": day_list
                     })
+
+                # LOCAL PATCH (DZD): wlej zajęcia dodatkowe do właściwych dni po dacie.
+                if dzd_events:
+                    by_date = {_d["data"]: _d for _d in result}
+                    touched = set()
+                    for ev in dzd_events:
+                        try:
+                            if str(ev.get("status", "")).upper().startswith("CANCEL"):
+                                continue
+                            _d = by_date.get(ev.get("date"))
+                            if _d is None:
+                                continue
+                            start = (ev.get("startTime") or "")[:5]
+                            end = (ev.get("endTime") or "")[:5]
+                            room = ev.get("classroom") or {}
+                            sala = room.get("name") or room.get("symbol") or ""
+                            teacher = ev.get("teacherName") or ""
+                            nis = ("%s  s. %s" % (teacher, sala)).strip() if sala else teacher
+                            lekcje = _d.setdefault("lekcje", [])
+                            title = ev.get("title") or "Zajęcia dodatkowe"
+                            if any(x.get("godzina_od") == start and x.get("przedmiot") == title for x in lekcje):
+                                continue
+                            lekcje.append({
+                                "przedmiot": title,
+                                "nauczyciel_i_sala": nis,
+                                "godzina_od": start,
+                                "godzina_do": end,
+                                "data": ev.get("date"),
+                                "numer": hour_to_num.get(start, "•"),
+                                "dzd": True,
+                            })
+                            touched.add(ev.get("date"))
+                        except Exception as merge_ex:
+                            _LOGGER.debug("DZD: pominięto wpis: %s", merge_ex)
+                    for dt in touched:
+                        by_date[dt]["lekcje"].sort(key=lambda x: (x.get("godzina_od") or "99:99"))
 
                 return result
 
