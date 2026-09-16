@@ -491,7 +491,7 @@ class LibrusApiClient:
                                 "godzina_od": start,
                                 "godzina_do": end,
                                 "data": ev.get("date"),
-                                "numer": hour_to_num.get(start, "•"),
+                                "numer": hour_to_num.get(start),
                                 "dzd": True,
                             })
                             touched.add(ev.get("date"))
