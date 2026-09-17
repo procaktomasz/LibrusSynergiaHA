@@ -470,6 +470,7 @@ MIT License - patrz [LICENSE](LICENSE)
 
 Specjalne podziękowania dla **KB** za wsparcie i pomoc w rozwoju projektu.  
 Ogromne podziękowania dla **@km4lin** za cenną kontrybucję i naprawę błędu blokującego integrację dla kont bez dziennika ocen!
+Dziękuję również dla **@Yauhenda** za dodanie wsparcia dla zajęć dodatkowych (DZD) w planie lekcji!
 
 ## 👨‍💻 Autorzy i podziękowania
 
