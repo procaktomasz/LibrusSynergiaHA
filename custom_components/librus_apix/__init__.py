@@ -407,8 +407,16 @@ class LibrusApiClient:
                             subject = period.subject
                             teacher_and_classroom = period.teacher_and_classroom
 
+                            odwolana = False
+                            zastepstwo = False
                             if period.info:
-                                for info_val in period.info.values():
+                                for info_key, info_val in period.info.items():
+                                    k_low = info_key.lower()
+                                    if "odwołane" in k_low or "okienko" in k_low or "zajęcia odwołane" in k_low:
+                                        odwolana = True
+                                    if "zastępstwo" in k_low:
+                                        zastepstwo = True
+
                                     if isinstance(info_val, dict):
                                         subject = subject.strip().replace("\n", " ")
                                         teacher_and_classroom = teacher_and_classroom.strip()
@@ -455,6 +463,9 @@ class LibrusApiClient:
                                 "godzina_do": period.date_to,
                                 "data": period.date or day_date,
                                 "numer": period.number,
+                                "odwolana": odwolana,
+                                "zastepstwo": zastepstwo,
+                                "zdarzenie": None,
                             })
                             if period.date_from and period.number is not None:
                                 hour_to_num.setdefault(period.date_from, period.number)
@@ -493,6 +504,9 @@ class LibrusApiClient:
                                 "data": ev.get("date"),
                                 "numer": hour_to_num.get(start),
                                 "dzd": True,
+                                "odwolana": False,
+                                "zastepstwo": False,
+                                "zdarzenie": None,
                             })
                             touched.add(ev.get("date"))
                         except Exception as merge_ex:

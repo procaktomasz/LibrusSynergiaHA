@@ -89,7 +89,22 @@ class LibrusTimetableCalendar(CoordinatorEntity, CalendarEntity):
                     dt_od = dt_od.replace(tzinfo=tz)
                     dt_do = dt_do.replace(tzinfo=tz)
                     
-                    summary = lekcja.get("przedmiot", "Lekcja")
+                    przedmiot = lekcja.get("przedmiot", "Lekcja")
+                    odwolana = lekcja.get("odwolana", False)
+                    zastepstwo = lekcja.get("zastepstwo", False)
+                    zdarzenie = lekcja.get("zdarzenie")
+                    
+                    if odwolana:
+                        summary = f"❌ [Odwołane] {przedmiot}"
+                    elif zastepstwo:
+                        summary = f"🔄 [Zastępstwo] {przedmiot}"
+                    elif zdarzenie == "Sprawdzian":
+                        summary = f"🔴 [{zdarzenie}] {przedmiot}"
+                    elif zdarzenie:
+                        summary = f"🟠 [{zdarzenie}] {przedmiot}"
+                    else:
+                        summary = przedmiot
+
                     sala = lekcja.get("nauczyciel_i_sala", "")
                     description = f"Nauczyciel i sala: {sala}" if sala else ""
                     
@@ -165,7 +180,11 @@ class LibrusScheduleCalendar(CoordinatorEntity, CalendarEntity):
                 szczegoly = ev.get("szczegoly", "")
                 
                 summary = f"[{przedmiot}] {tytul}" if przedmiot else tytul
-                description = f"{szczegoly}"
+                
+                if isinstance(szczegoly, dict):
+                    description = "\n".join(f"{k}: {v}" for k, v in szczegoly.items() if v.lower() != "unknown")
+                else:
+                    description = f"{szczegoly}"
                 
                 events.append(
                     CalendarEvent(

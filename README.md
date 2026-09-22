@@ -303,9 +303,9 @@ content: |
   {% set profil = 'imie_nazwisko' %}
   {% set encja = 'sensor.librus_' ~ profil ~ '_plan_lekcji' %}
   {% set dni = state_attr(encja, 'kolejne_7_dni') %}
-
+  
   {% if dni == none %}
-  ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`.
+  ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`. Upewnij się, że wpisano poprawny profil ucznia.
   {% else %}
   {% for dzien in dni %}
   {% set lekcje = dzien.lekcje %}
@@ -313,7 +313,7 @@ content: |
   ### {{ dzien.dzien_tygodnia }} ({{ dzien.data }}) - Zajęcia od {{ lekcje[0].godzina_od }} do {{ lekcje[-1].godzina_do }}
   | Godz. | Przedmiot | Nauczyciel i Sala |
   |---|---|---|
-  {% for l in lekcje %} | {{ l.godzina_od }}-{{ l.godzina_do }} | **{{ l.przedmiot }}** | {{ l.nauczyciel_i_sala }} |
+  {% for l in lekcje %} | {{ l.godzina_od }}-{{ l.godzina_do }} | {% if l.get('odwolana') %}~~{{ l.przedmiot }}~~{% elif l.get('zastepstwo') %}**<font color="#3366cc">{{ l.przedmiot }}</font>**{% elif l.get('zdarzenie') == 'Sprawdzian' %}**<font color="#cc0000ff">{{ l.przedmiot }}</font>**{% elif l.get('zdarzenie') == 'Kartkówka' %}**<font color="#cc9600ff">{{ l.przedmiot }}</font>**{% else %}**{{ l.przedmiot }}**{% endif %} | {{ l.nauczyciel_i_sala }} |
   {% endfor %}
   {% else %}
   ### {{ dzien.dzien_tygodnia }} ({{ dzien.data }})
@@ -471,6 +471,7 @@ MIT License - patrz [LICENSE](LICENSE)
 Specjalne podziękowania dla **KB** za wsparcie i pomoc w rozwoju projektu.  
 Ogromne podziękowania dla **@km4lin** za cenną kontrybucję i naprawę błędu blokującego integrację dla kont bez dziennika ocen!
 Dziękuję również dla **@Yauhenda** za dodanie wsparcia dla zajęć dodatkowych (DZD) w planie lekcji!
+Wielkie podziękowania dla **@jarecki** za wsparcie kodu w Pull Request #9, co pozwoliło poprawić działanie bibliotek.
 
 ## 👨‍💻 Autorzy i podziękowania
 

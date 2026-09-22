@@ -1,0 +1,24 @@
+type: markdown
+title: Plan Lekcji
+content: |
+  {% set profil = 'jan_kowalski' %}
+  {% set encja = 'sensor.librus_' ~ profil ~ '_plan_lekcji' %}
+  {% set dni = state_attr(encja, 'kolejne_7_dni') %}
+
+  {% if dni == none %}
+  ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`. Upewnij się, że wpisano poprawny profil ucznia.
+  {% else %}
+  {% for dzien in dni %}
+  {% set lekcje = dzien.lekcje %}
+  {% if lekcje | length > 0 %}
+  ### {{ dzien.dzien_tygodnia }} ({{ dzien.data }}) - Zajęcia od {{ lekcje[0].godzina_od }} do {{ lekcje[-1].godzina_do }}
+  | Godz. | Przedmiot | Nauczyciel i Sala |
+  |---|---|---|
+  {% for l in lekcje %} | {{ l.godzina_od }}-{{ l.godzina_do }} | {% if l.get('odwolana') %}~~{{ l.przedmiot }}~~{% elif l.get('zastepstwo') %}**<font color="blue">{{ l.przedmiot }}</font>**{% elif l.get('zdarzenie') == 'Sprawdzian' %}**<font color="red">{{ l.przedmiot }}</font>**{% elif l.get('zdarzenie') == 'Kartkówka' %}**<font color="orange">{{ l.przedmiot }}</font>**{% else %}**{{ l.przedmiot }}**{% endif %} | {{ l.nauczyciel_i_sala }} |
+  {% endfor %}
+  {% else %}
+  ### {{ dzien.dzien_tygodnia }} ({{ dzien.data }})
+  *Brak lekcji*
+  {% endif %}
+  {% endfor %}
+  {% endif %}

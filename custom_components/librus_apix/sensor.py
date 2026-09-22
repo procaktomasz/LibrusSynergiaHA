@@ -176,6 +176,40 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
             frekwencja = frekwencja_raw if frekwencja_raw is not None else prev.get("frekwencja", [])
             ogloszenia = ogloszenia_raw if ogloszenia_raw is not None else prev.get("ogloszenia", [])
 
+            # Fuzja: Zdarzenia z terminarza -> plan lekcji (dodanie pola zdarzenie)
+            if plan_lekcji and terminarz:
+                for t_ev in terminarz:
+                    ev_date = t_ev.get("data")
+                    ev_title = t_ev.get("tytul")
+                    ev_subject = t_ev.get("przedmiot")
+                    ev_num = t_ev.get("numer_lekcji")
+                    
+                    if not ev_date or not ev_title:
+                        continue
+                        
+                    for day in plan_lekcji:
+                        if day.get("data") != ev_date:
+                            continue
+                            
+                        for lekcja in day.get("lekcje", []):
+                            # Sprawdzamy zgodność po numerze lekcji lub nazwie przedmiotu
+                            match = False
+                            if ev_num and lekcja.get("numer"):
+                                try:
+                                    # Terminarz moze zwrocic "4", "4-5"
+                                    if str(lekcja["numer"]) in str(ev_num).split("-"):
+                                        match = True
+                                except Exception:
+                                    pass
+                            
+                            if not match and ev_subject and lekcja.get("przedmiot"):
+                                # Fallback na dopasowanie po nazwie przedmiotu
+                                if ev_subject.lower() in lekcja["przedmiot"].lower():
+                                    match = True
+                                    
+                            if match:
+                                lekcja["zdarzenie"] = ev_title
+
             result = {
                 "student_info": student_info,
                 "oceny": grades,
