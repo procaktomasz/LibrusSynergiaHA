@@ -466,12 +466,21 @@ Jeśli znajdziesz błąd:
 
 MIT License - patrz [LICENSE](LICENSE)
 
+## 📝 Historia Zmian
+
+### v2.2.1
+- **Inteligentna fuzja planu lekcji z terminarzem** - Nowy "Algorytm Wagowy" automatycznie dopasowuje sprawdziany (Terminarz) do odpowiednich przedmiotów w planie lekcji, zapobiegając błędnemu przypisywaniu (np. jeden sprawdzian na trzech przedmiotach tego samego dnia).
+- **Zabezpieczenie przed błędem SQLite 16KB w Home Assistant** - Optymalizacja objętości danych JSON (np. inteligentne ucinanie opisu po 100 znakach), chroniąca bazę Recordera przed przepełnieniem.
+- **Wyodrębnienie pól Nauczyciel i Sala** - Nowe atrybuty `nauczyciel` oraz `sala` w encjach lekcji ułatwiające niestandardowe budowanie kart.
+- **Poprawa parsowania przedmiotów z myślnikami** - Ochrona nazwisk nauczycieli przed ucięciem przy długich nazwach przedmiotów (np. zajęcia praktyczno-techniczne).
+
 ### 🙏 Podziękowania
 
 Specjalne podziękowania dla **KB** za wsparcie i pomoc w rozwoju projektu.  
 Ogromne podziękowania dla **@km4lin** za cenną kontrybucję i naprawę błędu blokującego integrację dla kont bez dziennika ocen!
 Dziękuję również dla **@Yauhenda** za dodanie wsparcia dla zajęć dodatkowych (DZD) w planie lekcji!
 Wielkie podziękowania dla **@jarecki** za wsparcie kodu w Pull Request #9, co pozwoliło poprawić działanie bibliotek.
+Dzięki dla **@sgurgul** za celne zgłoszenia (Issue #12, #13, #14) i cenne sugestie optymalizacyjne, które weszły w skład wersji 2.2.1!
 
 ## 👨‍💻 Autorzy i podziękowania
 
