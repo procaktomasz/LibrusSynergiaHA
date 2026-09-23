@@ -191,24 +191,42 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                         if day.get("data") != ev_date:
                             continue
                             
+                        scored_lekcje = []
+                        max_score = 0
+                        
                         for lekcja in day.get("lekcje", []):
-                            # Sprawdzamy zgodność po numerze lekcji lub nazwie przedmiotu
-                            match = False
+                            score = 0
+                            
+                            # Dopasowanie po nazwie przedmiotu (WAGA: 2)
+                            if ev_subject and lekcja.get("przedmiot"):
+                                if ev_subject.lower() in lekcja["przedmiot"].lower() or lekcja["przedmiot"].lower() in ev_subject.lower():
+                                    score += 2
+                                    
+                            # Dopasowanie po numerze lekcji (WAGA: 1)
                             if ev_num and lekcja.get("numer"):
                                 try:
                                     # Terminarz moze zwrocic "4", "4-5"
                                     if str(lekcja["numer"]) in str(ev_num).split("-"):
-                                        match = True
+                                        score += 1
                                 except Exception:
                                     pass
                             
-                            if not match and ev_subject and lekcja.get("przedmiot"):
-                                # Fallback na dopasowanie po nazwie przedmiotu
-                                if ev_subject.lower() in lekcja["przedmiot"].lower():
-                                    match = True
+                            if score > 0:
+                                scored_lekcje.append((score, lekcja))
+                                if score > max_score:
+                                    max_score = score
                                     
-                            if match:
-                                lekcja["zdarzenie"] = ev_title
+                        # Przypisz zdarzenie tylko do lekcji z najwyzszym wynikiem
+                        if max_score > 0:
+                            for score, lekcja in scored_lekcje:
+                                if score == max_score:
+                                    lekcja["zdarzenie"] = ev_title
+                                    ev_opis = t_ev.get("szczegoly", {}).get("Opis")
+                                    if ev_opis and str(ev_opis).lower() != "unknown":
+                                        opis_str = str(ev_opis).strip()
+                                        if len(opis_str) > 100:
+                                            opis_str = opis_str[:97] + "..."
+                                        lekcja["zdarzenie_opis"] = opis_str
 
             result = {
                 "student_info": student_info,

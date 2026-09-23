@@ -407,6 +407,12 @@ class LibrusApiClient:
                             subject = period.subject
                             teacher_and_classroom = period.teacher_and_classroom
 
+                            if "-" in subject:
+                                suffix_that_got_prepended = "-".join(subject.split("-")[1:])
+                                if teacher_and_classroom.startswith(suffix_that_got_prepended + "-"):
+                                    teacher_and_classroom = teacher_and_classroom[len(suffix_that_got_prepended) + 1:]
+
+
                             odwolana = False
                             zastepstwo = False
                             if period.info:
@@ -456,17 +462,40 @@ class LibrusApiClient:
                                             teacher_and_classroom = f"Sala {new_room}"
                                         break
 
-                            day_list.append({
+                            nauczyciel = teacher_and_classroom
+                            sala = ""
+                            tc_lower = teacher_and_classroom.lower()
+                            if " s. " in tc_lower:
+                                idx = tc_lower.rfind(" s. ")
+                                nauczyciel = teacher_and_classroom[:idx].strip()
+                                sala = teacher_and_classroom[idx + 1:].strip()
+                            elif " sala " in tc_lower:
+                                idx = tc_lower.rfind(" sala ")
+                                nauczyciel = teacher_and_classroom[:idx].strip()
+                                sala = teacher_and_classroom[idx + 1:].strip()
+                            elif " - " in teacher_and_classroom:
+                                parts = teacher_and_classroom.rsplit(" - ", 1)
+                                nauczyciel = parts[0].strip()
+                                sala = parts[1].strip()
+
+                            lekcja_dict = {
                                 "przedmiot": subject,
                                 "nauczyciel_i_sala": teacher_and_classroom,
                                 "godzina_od": period.date_from,
                                 "godzina_do": period.date_to,
                                 "data": period.date or day_date,
                                 "numer": period.number,
-                                "odwolana": odwolana,
-                                "zastepstwo": zastepstwo,
                                 "zdarzenie": None,
-                            })
+                            }
+                            if odwolana:
+                                lekcja_dict["odwolana"] = True
+                            if zastepstwo:
+                                lekcja_dict["zastepstwo"] = True
+                            if nauczyciel:
+                                lekcja_dict["nauczyciel"] = nauczyciel
+                            if sala:
+                                lekcja_dict["sala"] = sala
+                            day_list.append(lekcja_dict)
                             if period.date_from and period.number is not None:
                                 hour_to_num.setdefault(period.date_from, period.number)
                     result.append({
