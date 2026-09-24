@@ -127,12 +127,26 @@ class LibrusApiClient:
                             if grade_val and (grade_val.replace('+', '').replace('-', '').isdigit() or
                                             grade_val in ['1', '2', '3', '4', '5', '6', '1+', '1-', '2+', '2-',
                                                          '3+', '3-', '4+', '4-', '5+', '5-', '6+', '6-']):
+                                
+                                desc_text = getattr(desc_grade, 'desc', '')
+                                parsed_cat = ""
+                                parsed_teacher = getattr(desc_grade, 'teacher', '')
+                                
+                                for line in desc_text.split('\n'):
+                                    if line.startswith("Kategoria:"):
+                                        parsed_cat = line.split(":", 1)[1].strip()
+                                    if not parsed_teacher and line.startswith("Nauczyciel:"):
+                                        parsed_teacher = line.split(":", 1)[1].strip()
+                                
+                                if not parsed_cat:
+                                    parsed_cat = desc_text.split('\n')[0] if desc_text else ''
+
                                 all_grades.append({
                                     'subject': subject,
                                     'grade': desc_grade.grade,
                                     'date': desc_grade.date,
-                                    'category': getattr(desc_grade, 'desc', '').split('\n')[0] if hasattr(desc_grade, 'desc') else '',
-                                    'teacher': getattr(desc_grade, 'teacher', ''),
+                                    'category': parsed_cat,
+                                    'teacher': parsed_teacher,
                                     'semester': desc_grade.semester,
                                     'type': 'descriptive'
                                 })
@@ -418,7 +432,7 @@ class LibrusApiClient:
                             if period.info:
                                 for info_key, info_val in period.info.items():
                                     k_low = info_key.lower()
-                                    if "odwołane" in k_low or "okienko" in k_low or "zajęcia odwołane" in k_low:
+                                    if "odwołane" in k_low or "okienko" in k_low or "zajęcia odwołane" in k_low or "przesunięt" in k_low:
                                         odwolana = True
                                     if "zastępstwo" in k_low:
                                         zastepstwo = True

@@ -202,12 +202,12 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                                 if ev_subject.lower() in lekcja["przedmiot"].lower() or lekcja["przedmiot"].lower() in ev_subject.lower():
                                     score += 2
                                     
-                            # Dopasowanie po numerze lekcji (WAGA: 1)
+                            # Dopasowanie po numerze lekcji (WAGA: 5 - priorytet dla zastępstw)
                             if ev_num and lekcja.get("numer"):
                                 try:
                                     # Terminarz moze zwrocic "4", "4-5"
                                     if str(lekcja["numer"]) in str(ev_num).split("-"):
-                                        score += 1
+                                        score += 5
                                 except Exception:
                                     pass
                             
