@@ -130,22 +130,28 @@ class LibrusApiClient:
                                 
                                 desc_text = getattr(desc_grade, 'desc', '')
                                 parsed_cat = ""
+                                parsed_skill = ""
                                 parsed_teacher = getattr(desc_grade, 'teacher', '')
                                 
                                 for line in desc_text.split('\n'):
                                     if line.startswith("Kategoria:"):
                                         parsed_cat = line.split(":", 1)[1].strip()
-                                    if not parsed_teacher and line.startswith("Nauczyciel:"):
+                                    elif line.startswith("Umiejętność:"):
+                                        parsed_skill = line.split(":", 1)[1].strip()
+                                    elif not parsed_teacher and line.startswith("Nauczyciel:"):
                                         parsed_teacher = line.split(":", 1)[1].strip()
                                 
-                                if not parsed_cat:
-                                    parsed_cat = desc_text.split('\n')[0] if desc_text else ''
+                                final_cat = parsed_cat
+                                if not final_cat and parsed_skill:
+                                    final_cat = parsed_skill
+                                elif not final_cat:
+                                    final_cat = desc_text.split('\n')[0] if desc_text else ''
 
                                 all_grades.append({
                                     'subject': subject,
                                     'grade': desc_grade.grade,
                                     'date': desc_grade.date,
-                                    'category': parsed_cat,
+                                    'category': final_cat,
                                     'teacher': parsed_teacher,
                                     'semester': desc_grade.semester,
                                     'type': 'descriptive'
