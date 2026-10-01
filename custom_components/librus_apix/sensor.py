@@ -158,6 +158,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                     "kategoria": grade["category"],
                     "nauczyciel": grade["teacher"],
                     "semestr": grade.get("semester"),
+                    "komentarz": grade.get("komentarz", ""),
                     "jest_nowa": _jest_nowa(grade["date"]),
                 })
 
