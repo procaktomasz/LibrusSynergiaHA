@@ -3,6 +3,8 @@
 import asyncio
 import logging
 import traceback
+import html
+import re
 from datetime import date
 from typing import Dict, Any
 
@@ -19,6 +21,32 @@ from librus_apix.exceptions import TokenError
 from .const import DOMAIN, SCAN_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _extract_comment(desc: str) -> str:
+    """Wyodrebnij komentarz z opisu oceny zwroconego przez librus-apix."""
+    if not desc:
+        return ""
+
+    # W zaleznosci od wersji parsera desc moze zawierac zwykly tekst
+    # albo fragment HTML z <br />. Ujednolicamy oba przypadki.
+    text = html.unescape(str(desc))
+    text = re.sub(r"<br\\s*/?>", "\\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", "", text)
+
+    for line in text.splitlines():
+        line = line.strip()
+        if line.lower().startswith("komentarz:"):
+            return line.split(":", 1)[1].strip()
+
+    # Awaryjnie obsluz przypadek, gdy komentarz nie jest oddzielony nowa linia.
+    marker = "komentarz:"
+    lower_text = text.lower()
+    pos = lower_text.find(marker)
+    if pos != -1:
+        return text[pos + len(marker):].strip()
+
+    return ""
 
 
 def _current_semester() -> int:
@@ -107,6 +135,7 @@ class LibrusApiClient:
                         for grade in grades_list:
                             if grade.semester != current_sem:
                                 continue
+                            grade_desc = getattr(grade, 'desc', '') or ''
                             all_grades.append({
                                 'subject': subject,
                                 'grade': grade.grade,
@@ -114,6 +143,7 @@ class LibrusApiClient:
                                 'category': grade.category,
                                 'teacher': getattr(grade, 'teacher', ''),
                                 'semester': grade.semester,
+                                'komentarz': _extract_comment(grade_desc),
                                 'type': 'numeric'
                             })
 
@@ -154,6 +184,7 @@ class LibrusApiClient:
                                     'category': final_cat,
                                     'teacher': parsed_teacher,
                                     'semester': desc_grade.semester,
+                                    'komentarz': _extract_comment(desc_text),
                                     'type': 'descriptive'
                                 })
 
@@ -389,26 +420,22 @@ class LibrusApiClient:
                 oauth = client.refresh_oauth()
                 if oauth:
                     client.cookies["oauth_token"] = oauth
-
+                
                 results = []
-                for endpoint in ["IndividualLearningPath", "OneToOneLearningPlan"]:
+                for endpoint in ["individuallearningpath", "onetoonelearningplan"]:
                     url = (
-                        "%s/gateway/api/2.0/Timetables/%s"
-                        "?dateFrom=%s&dateTo=%s&hideOutdatedEntries=false"
+                        "%s/gateway/ms/%s?dateFrom=%s&dateTo=%s"
                         % (client.BASE_URL, endpoint, date_from, date_to)
                     )
                     resp = client.get(url)
-                    payload = resp.json() or {}
-                    data = payload.get("data")
-                    if data is None:
-                        _LOGGER.warning(
-                            "ZŚK: brak pola 'data' dla %s (HTTP %s): %s",
-                            endpoint,
-                            getattr(resp, "status_code", "?"),
-                            str(payload)[:200],
-                        )
-                        continue
-                    results.extend(data)
+                    try:
+                        payload = resp.json() or []
+                        if isinstance(payload, list):
+                            results.extend(payload)
+                        elif isinstance(payload, dict):
+                            results.extend(payload.get("events", []) or payload.get("data", []) or [])
+                    except Exception:
+                        pass
                 return results
 
             return await loop.run_in_executor(None, _fetch)
@@ -565,11 +592,10 @@ class LibrusApiClient:
                         "lekcje": day_list
                     })
 
-                # LOCAL PATCH: wlej DZD oraz ZŚK do właściwych dni po dacie.
-                by_date = {_d["data"]: _d for _d in result}
-                touched = set()
-
+                # LOCAL PATCH (DZD): wlej zajęcia dodatkowe do właściwych dni po dacie.
                 if dzd_events:
+                    by_date = {_d["data"]: _d for _d in result}
+                    touched = set()
                     for ev in dzd_events:
                         try:
                             if str(ev.get("status", "")).upper().startswith("CANCEL"):
@@ -602,44 +628,44 @@ class LibrusApiClient:
                             touched.add(ev.get("date"))
                         except Exception as merge_ex:
                             _LOGGER.debug("DZD: pominięto wpis: %s", merge_ex)
+                    
+                    if zsk_events:
+                        for ev in zsk_events:
+                            try:
+                                _d = by_date.get(ev.get("date"))
+                                if _d is None:
+                                    continue
+                                start = (ev.get("startTime") or "")[:5]
+                                end = (ev.get("endTime") or "")[:5]
+                                room = ev.get("classroom") or {}
+                                sala = room.get("name") or room.get("symbol") or ""
+                                teacher = ev.get("teacherName") or ""
+                                nis = ("%s  s. %s" % (teacher, sala)).strip() if sala else teacher
+                                lekcje = _d.setdefault("lekcje", [])
+                                title = ev.get("subject") or ev.get("title") or "ZŚK"
+                                is_canceled = str(ev.get("status", "")).upper().startswith("CANCEL")
+                                if any(x.get("godzina_od") == start and title in x.get("przedmiot", "") for x in lekcje):
+                                    continue
+                                
+                                lekcje.append({
+                                    "przedmiot": f"{title} [ZŚK]",
+                                    "nauczyciel_i_sala": nis,
+                                    "godzina_od": start,
+                                    "godzina_do": end,
+                                    "data": ev.get("date"),
+                                    "numer": hour_to_num.get(start),
+                                    "dzd": False,
+                                    "zsk": True,
+                                    "odwolana": is_canceled,
+                                    "zastepstwo": False,
+                                    "zdarzenie": None,
+                                })
+                                touched.add(ev.get("date"))
+                            except Exception as merge_ex:
+                                _LOGGER.debug("ZŚK: pominięto wpis: %s", merge_ex)
 
-                if zsk_events:
-                    for ev in zsk_events:
-                        try:
-                            _d = by_date.get(ev.get("date"))
-                            if _d is None:
-                                continue
-                            start = (ev.get("startTime") or "")[:5]
-                            end = (ev.get("endTime") or "")[:5]
-                            room = ev.get("classroom") or {}
-                            sala = room.get("symbol") or room.get("name") or ""
-                            teacher = ev.get("teacherName") or ""
-                            nis = ("%s  s. %s" % (teacher, sala)).strip() if sala else teacher
-                            lekcje = _d.setdefault("lekcje", [])
-                            title = ev.get("subject") or ev.get("title") or "ZŚK"
-                            is_canceled = str(ev.get("status", "")).upper().startswith("CANCEL")
-                            if any(x.get("godzina_od") == start and title in x.get("przedmiot", "") for x in lekcje):
-                                continue
-
-                            lekcje.append({
-                                "przedmiot": f"{title} [ZŚK]",
-                                "nauczyciel_i_sala": nis,
-                                "godzina_od": start,
-                                "godzina_do": end,
-                                "data": ev.get("date"),
-                                "numer": hour_to_num.get(start),
-                                "dzd": False,
-                                "zsk": True,
-                                "odwolana": is_canceled,
-                                "zastepstwo": False,
-                                "zdarzenie": None,
-                            })
-                            touched.add(ev.get("date"))
-                        except Exception as merge_ex:
-                            _LOGGER.debug("ZŚK: pominięto wpis: %s", merge_ex)
-
-                for dt in touched:
-                    by_date[dt]["lekcje"].sort(key=lambda x: (x.get("godzina_od") or "99:99"))
+                    for dt in touched:
+                        by_date[dt]["lekcje"].sort(key=lambda x: (x.get("godzina_od") or "99:99"))
 
                 return result
 
