@@ -118,6 +118,15 @@ class LibrusApiClient:
                                     komentarz_str = comments_obj.text
                                 else:
                                     komentarz_str = str(comments_obj)
+
+                            # librus-apix 1.5.2 stores the grade tooltip (including
+                            # "Komentarz:") in desc; its Grade object has no comments field.
+                            if not komentarz_str:
+                                desc_text = getattr(grade, 'desc', '') or ''
+                                for line in desc_text.splitlines():
+                                    if line.startswith("Komentarz:"):
+                                        komentarz_str = line.split(":", 1)[1].strip()
+                                        break
                                     
                             all_grades.append({
                                 'subject': subject,
