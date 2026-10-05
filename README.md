@@ -29,7 +29,8 @@ Integracja tworzy następujące sensory:
 | `sensor.librus_<przedmiot>` | Oceny z danego przedmiotu (np. `sensor.librus_matematyka`) | lista ocen: "4, 3+, 5" |
 | `sensor.librus_srednia_<przedmiot>` | **Średnia** z danego przedmiotu (np. `sensor.librus_srednia_matematyka`) | float (wykres 📈) |
 | `sensor.librus_plan_lekcji` | Plan lekcji na pełne 7 dni z rozbiciem na dni tygodnia | - |
-| `sensor.librus_frekwencja` | Lista nieobecności i spóźnień | liczba nieobecności |
+| `sensor.librus_frekwencja` | Lista nieobecności i spóźnień, rozbicie na usprawiedliwione / nieusprawiedliwione / zwolnienia oraz **frekwencja w %** (semestr i rok) | liczba nieobecności |
+| `sensor.librus_tematy_lekcji` | **Tematy zrealizowanych lekcji** z ostatnich 7 dni wraz z wpisem frekwencji przy każdej lekcji (np. `nb` tylko na 1. lekcji) i zastępcą, jeśli lekcja była zastępstwem | liczba lekcji dzisiaj |
 | `sensor.librus_ogloszenia` | Najnowsze ogłoszenia | liczba ogłoszeń |
 | `calendar.*_calendar_timetable` | Wbudowany kalendarz lekcji ucznia | wydarzenia |
 | `calendar.*_calendar_schedule` | Wbudowany kalendarz sprawdzianów i wydarzeń | wydarzenia |
@@ -89,6 +90,8 @@ recorder:
       - sensor.librus_*_zadania
       - sensor.librus_*_ogloszenia
       - sensor.librus_*_oceny
+      - sensor.librus_*_tematy_lekcji
+      - sensor.librus_*_frekwencja
 ```
 ## 📊 Przykładowe karty Lovelace
 
@@ -336,8 +339,37 @@ content: |
   {% if states(encja_frek) in ['unavailable', 'unknown'] %}
   ⚠️ **Błąd:** Nie znaleziono encji dla profilu `{{ profil }}`.
   {% else %}
+  - **Frekwencja w semestrze:** {{ state_attr(encja_frek, 'frekwencja_procent') | default('-', true) }}%
   - **Spóźnienia:** {{ state_attr(encja_frek, 'liczba_spoznien') | default(0) }}
   - **Nieobecności:** {{ state_attr(encja_frek, 'liczba_nieobecnosci') | default(0) }}
+    (nieusprawiedliwione: {{ state_attr(encja_frek, 'liczba_nieusprawiedliwionych') | default(0) }},
+    usprawiedliwione: {{ state_attr(encja_frek, 'liczba_usprawiedliwionych') | default(0) }})
+  {% endif %}
+```
+
+### Karta tematów lekcji (Markdown)
+
+Tematy zrealizowanych lekcji z ostatnich 7 dni. Przy lekcjach z nieobecnością (`nb`) lub usprawiedliwioną (`u`) widać symbol frekwencji, a 🔄 oznacza zastępstwo — przydatne, gdy dziecko spóźni się na pierwszą lekcję albo nadrabia materiał po chorobie.
+
+> **WAŻNE:** Pamiętaj, aby podmienić w kodzie `imie_nazwisko` na poprawne dane z Twoich encji!
+
+```yaml
+type: markdown
+title: 📖 Tematy lekcji
+content: |
+  {% set profil = 'imie_nazwisko' %}
+  {% set lekcje = state_attr('sensor.librus_' ~ profil ~ '_tematy_lekcji', 'lekcje') %}
+  {% if lekcje == none %}
+  ⚠️ **Błąd:** Nie znaleziono encji dla profilu `{{ profil }}`.
+  {% else %}
+  {% for dzien, lista in lekcje | groupby('data') | reverse %}
+  #### {{ dzien }}
+  {% for l in lista %}
+  `{{ l.numer }}` **{{ l.przedmiot }}**{{ ' 🔄 ' ~ l.zastepca if l.zastepstwo }}{{ ' ❗' ~ l.obecnosc if l.obecnosc in ['nb', 'u', 'sp'] }} – {{ l.temat | replace('\n', ' ') }}<br>
+  {% endfor %}
+  {% else %}
+  Brak zrealizowanych lekcji w ostatnich 7 dniach.
+  {% endfor %}
   {% endif %}
 ```
 

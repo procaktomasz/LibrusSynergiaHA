@@ -17,6 +17,8 @@ def mock_client():
     client.async_get_timetable = AsyncMock(return_value=[])
     client.async_get_attendance = AsyncMock(return_value=[])
     client.async_get_announcements = AsyncMock(return_value=[])
+    client.async_get_completed_lessons = AsyncMock(return_value=[])
+    client.async_get_attendance_stats = AsyncMock(return_value=None)
     return client
 
 @pytest.fixture

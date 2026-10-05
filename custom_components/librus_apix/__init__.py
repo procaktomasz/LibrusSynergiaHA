@@ -31,6 +31,79 @@ def _current_semester() -> int:
     m = date.today().month
     return 1 if m >= 9 else 2
 
+def _iso_date(d: str) -> str:
+    """Znormalizuj date do formatu RRRR-MM-DD (jesli sie da)."""
+    from datetime import datetime
+
+    d = (d or "").strip()
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d.%m.%Y"):
+        try:
+            return datetime.strptime(d, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    return d
+
+
+def _parse_completed_lessons(html: str) -> list:
+    """Sparsuj tabele strony "Zrealizowane lekcje".
+
+    Kolumny: Data | Dzien | Nr lekcji | Przedmiot, nauczyciel | Temat | Z |
+    [e-Tablica] | Frekwencja. Liczba kolumn rozni sie miedzy szkolami, wiec
+    frekwencje bierzemy z odnosnika w ramce (p.box > a) albo z ostatniej
+    kolumny. Zastepstwo Librus oznacza nazwiskiem zastepcy w nawiasie
+    kwadratowym: "Kowalska Anna [Nowak Maria]".
+    """
+    import re
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "lxml")
+    lessons = []
+    for tr in soup.select('table[class="decorated"] > tbody > tr'):
+        data_td = tr.select_one("td.center.small")
+        dzien_td = tr.select_one("td.tiny")
+        cells = [td.get_text(" ", strip=True) for td in tr.find_all("td", attrs={"class": None})]
+        if len(cells) < 3:
+            continue
+
+        try:
+            numer = int(cells[0])
+        except ValueError:
+            numer = None
+
+        parts = re.split(r"\s*,\s*", cells[1], maxsplit=1)
+        przedmiot = parts[0].strip()
+        nauczyciel = parts[1].strip() if len(parts) > 1 else ""
+        zastepca = ""
+        m = re.match(r"^(.*?)\s*\[(.+)\]\s*$", nauczyciel)
+        if m:
+            nauczyciel, zastepca = m.group(1).strip(), m.group(2).strip()
+
+        obecnosc = ""
+        obecnosc_opis = ""
+        box = tr.select_one("p.box a")
+        if box is not None:
+            obecnosc = box.get_text(strip=True)
+            m = re.search(r"Rodzaj:\s*([^<]+)", box.get("title", ""))
+            if m:
+                obecnosc_opis = m.group(1).strip()
+        elif len(cells) >= 4:
+            obecnosc = cells[-1]
+
+        lessons.append({
+            "data": _iso_date(data_td.get_text(strip=True) if data_td else ""),
+            "dzien_tygodnia": dzien_td.get_text(strip=True) if dzien_td else "",
+            "numer": numer,
+            "przedmiot": przedmiot,
+            "nauczyciel": nauczyciel,
+            "zastepca": zastepca,
+            "zastepstwo": bool(zastepca),
+            "temat": cells[2],
+            "obecnosc": obecnosc,
+            "obecnosc_opis": obecnosc_opis,
+        })
+    return lessons
+
+
 PLATFORMS = ["sensor", "calendar", "todo", "button"]
 
 CONFIG_SCHEMA = vol.Schema(
@@ -813,6 +886,130 @@ class LibrusApiClient:
                 self._reset_auth()
                 if attempt == 1:
                     return None
+
+    async def async_get_completed_lessons(self, days: int = 7):
+        """Pobierz zrealizowane lekcje (tematy) z ostatnich `days` dni.
+
+        Strona "Zrealizowane lekcje" jest stronicowana po 15 wpisow. Pobieramy
+        wszystkie strony z zakresu (max 10) i usuwamy duplikaty - Librus
+        przy numerze strony poza zakresem zwraca ostatnia strone.
+
+        Wiersze parsujemy sami (_parse_completed_lessons), bo
+        librus_apix.completed_lessons zaklada stala liczbe kolumn, a czesc
+        szkol ma dodatkowa kolumne "e-Tablica" - wtedy biblioteka zwraca
+        pusta frekwencje zamiast "ob"/"nb".
+        """
+        for attempt in range(2):
+            try:
+                if not self._client or not self._token:
+                    if not await self.async_authenticate():
+                        return None
+                client = self._client
+
+                from librus_apix.completed_lessons import get_max_page_number
+                from datetime import date as _date, timedelta
+
+                today = _date.today()
+                date_from = (today - timedelta(days=days)).strftime("%Y-%m-%d")
+                date_to = today.strftime("%Y-%m-%d")
+
+                def _fetch_all_pages():
+                    max_pages = get_max_page_number(client, date_from, date_to)
+                    lessons = []
+                    seen = set()
+                    for page in range(min(max_pages, 9) + 1):
+                        html = client.post(
+                            client.COMPLETED_LESSONS_URL,
+                            data={
+                                "data1": date_from,
+                                "data2": date_to,
+                                "filtruj_id_przedmiotu": -1,
+                                "numer_strony1001": page,
+                                "porcjowanie_pojemnik1001": 1001,
+                            },
+                        ).text
+                        for lesson in _parse_completed_lessons(html):
+                            key = (lesson["data"], lesson["numer"], lesson["przedmiot"], lesson["temat"])
+                            if key in seen:
+                                continue
+                            seen.add(key)
+                            lessons.append(lesson)
+                    return lessons
+
+                loop = asyncio.get_running_loop()
+                result = await loop.run_in_executor(None, _fetch_all_pages)
+                # Najnowszy dzien na poczatku, w obrebie dnia wg numeru lekcji
+                result.sort(key=lambda l: (l["numer"] if l["numer"] is not None else 99))
+                result.sort(key=lambda l: l["data"], reverse=True)
+                return result
+
+            except TokenError:
+                _LOGGER.debug(
+                    "Token expired fetching completed lessons (attempt %d/2), re-authenticating...",
+                    attempt + 1,
+                )
+                self._reset_auth()
+                if attempt == 1:
+                    return None
+            except Exception as ex:
+                if type(ex).__name__ == "ParseError":
+                    return []
+                _LOGGER.error(
+                    "Failed to get completed lessons (attempt %d/2): %s\n%s",
+                    attempt + 1, ex, traceback.format_exc(),
+                )
+                self._reset_auth()
+                if attempt == 1:
+                    return None
+
+    async def async_get_attendance_stats(self):
+        """Pobierz wszystkie wpisy frekwencji (takze obecnosci) z gateway API.
+
+        Potrzebne do wyliczenia procentu frekwencji - strona HTML pokazuje
+        tylko nieobecnosci/spoznienia. Best-effort: przy bledzie zwraca None
+        (czujnik pokaze wtedy dane bez procentu).
+        Zwraca liste (symbol, semestr), np. ("ob", 1).
+        """
+        types = {
+            "1": "nb",
+            "2": "sp",
+            "3": "u",
+            "4": "zw",
+            "100": "ob",
+            "1266": "wy",
+            "2022": "k",
+            "2829": "sz",
+        }
+        try:
+            if not self._client or not self._token:
+                if not await self.async_authenticate():
+                    return None
+            client = self._client
+            loop = asyncio.get_running_loop()
+
+            def _fetch():
+                oauth = client.refresh_oauth()
+                if oauth:
+                    client.cookies["oauth_token"] = oauth
+                resp = client.get(client.GATEWAY_API_ATTENDANCE)
+                payload = resp.json() or {}
+                attendances = payload.get("Attendances")
+                if attendances is None:
+                    _LOGGER.warning(
+                        "Frekwencja: brak pola 'Attendances' (HTTP %s): %s",
+                        getattr(resp, "status_code", "?"), str(payload)[:200],
+                    )
+                    return None
+                result = []
+                for a in attendances:
+                    type_id = str((a.get("Type") or {}).get("Id", ""))
+                    result.append((types.get(type_id, "inne"), a.get("Semester")))
+                return result
+
+            return await loop.run_in_executor(None, _fetch)
+        except Exception as ex:
+            _LOGGER.warning("Frekwencja: nie udało się pobrać statystyk: %s", ex)
+            return None
 
 
 async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:

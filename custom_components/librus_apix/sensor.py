@@ -91,6 +91,34 @@ def _srednia_ocen(oceny: List[Dict]) -> Optional[float]:
     return round(sum(wartosci) / len(wartosci), 2) if wartosci else None
 
 
+# Symbole liczone jako obecnosc (jak w librus_apix.attendance.get_attendance_frequency)
+_OBECNOSC = ("ob", "sp", "wy")
+
+
+def _frekwencja_statystyki(wpisy: List[tuple], semestr: int) -> Dict[str, Any]:
+    """Policz frekwencje z listy (symbol, semestr) z gateway API.
+
+    Zwraca procent obecnosci w biezacym semestrze i w calym roku oraz liczbe
+    wpisow kazdego rodzaju w biezacym semestrze.
+    """
+    def _procent(lista):
+        if not lista:
+            return None
+        obecne = sum(1 for s in lista if s in _OBECNOSC)
+        return round(100 * obecne / len(lista), 1)
+
+    w_semestrze = [s for s, sem in wpisy if sem == semestr]
+    rodzaje: Dict[str, int] = {}
+    for s in w_semestrze:
+        rodzaje[s] = rodzaje.get(s, 0) + 1
+    return {
+        "procent_semestr": _procent(w_semestrze),
+        "procent_rok": _procent([s for s, _ in wpisy]),
+        "lekcji_w_semestrze": len(w_semestrze),
+        "rodzaje": rodzaje,
+    }
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -110,6 +138,7 @@ async def async_setup_entry(
         LibrusPlanLekcjiSensor(coordinator, config_entry),
         LibrusFrekwencjaSensor(coordinator, config_entry),
         LibrusOgloszeniaSensor(coordinator, config_entry),
+        LibrusTematyLekcjiSensor(coordinator, config_entry),
     ]
 
     # Tworz czujniki per przedmiot na podstawie pierwszego pobrania danych
@@ -161,6 +190,8 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
             plan_lekcji_raw = await self.client.async_get_timetable()
             frekwencja_raw = await self.client.async_get_attendance()
             ogloszenia_raw = await self.client.async_get_announcements()
+            tematy_raw = await self.client.async_get_completed_lessons()
+            frekwencja_stat_raw = await self.client.async_get_attendance_stats()
 
             prev = self.data or {}
 
@@ -209,6 +240,12 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
             plan_lekcji = plan_lekcji_raw if plan_lekcji_raw is not None else prev.get("plan_lekcji", [])
             frekwencja = frekwencja_raw if frekwencja_raw is not None else prev.get("frekwencja", [])
             ogloszenia = ogloszenia_raw if ogloszenia_raw is not None else prev.get("ogloszenia", [])
+            tematy_lekcji = tematy_raw if tematy_raw is not None else prev.get("tematy_lekcji", [])
+            frekwencja_stat = (
+                _frekwencja_statystyki(frekwencja_stat_raw, current_sem)
+                if frekwencja_stat_raw is not None
+                else prev.get("frekwencja_stat")
+            )
 
             # Fuzja: Zdarzenia z terminarza -> plan lekcji (dodanie pola zdarzenie)
             if plan_lekcji and terminarz:
@@ -298,6 +335,8 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 "plan_lekcji": plan_lekcji,
                 "frekwencja": frekwencja,
                 "ogloszenia": ogloszenia,
+                "tematy_lekcji": tematy_lekcji,
+                "frekwencja_stat": frekwencja_stat,
                 "semestr_biezacy": current_sem,
             }
 
@@ -903,11 +942,55 @@ class LibrusFrekwencjaSensor(CoordinatorEntity, SensorEntity):
         
         spoznienia = [f for f in frekwencja if f.get("symbol") == "sp"]
         nieobecnosci = [f for f in frekwencja if f.get("symbol") in ["nb", "u"]]
-        
+        stat = data.get("frekwencja_stat") or {}
+
         return {
             "lista_wpisow": frekwencja,
             "liczba_spoznien": len(spoznienia),
             "liczba_nieobecnosci": len(nieobecnosci),
+            "liczba_nieusprawiedliwionych": sum(1 for f in frekwencja if f.get("symbol") == "nb"),
+            "liczba_usprawiedliwionych": sum(1 for f in frekwencja if f.get("symbol") == "u"),
+            "liczba_zwolnien": sum(1 for f in frekwencja if f.get("symbol") == "zw"),
+            "frekwencja_procent": stat.get("procent_semestr"),
+            "frekwencja_procent_rok": stat.get("procent_rok"),
+            "lekcji_w_semestrze": stat.get("lekcji_w_semestrze"),
+            "wpisy_wg_rodzaju": stat.get("rodzaje", {}),
+        }
+
+
+class LibrusTematyLekcjiSensor(CoordinatorEntity, SensorEntity):
+    """Czujnik z tematami zrealizowanych lekcji (ostatnie 7 dni) i obecnoscia na kazdej lekcji."""
+
+    def __init__(self, coordinator: LibrusDataUpdateCoordinator, config_entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        self._attr_has_entity_name = False
+        self._attr_name = "Tematy lekcji"
+        self._attr_unique_id = f"{config_entry.entry_id}_tematy_lekcji"
+        self._attr_icon = "mdi:book-open-page-variant"
+
+    @property
+    def device_info(self) -> Dict[str, Any]:
+        return _device_info(self.coordinator, self._config_entry)
+
+    @property
+    def native_value(self) -> int:
+        """Liczba zrealizowanych lekcji dzisiaj."""
+        dzis = date.today().strftime("%Y-%m-%d")
+        lekcje = (self.coordinator.data or {}).get("tematy_lekcji", [])
+        return sum(1 for l in lekcje if l.get("data") == dzis)
+
+    @property
+    def extra_state_attributes(self) -> Dict[str, Any]:
+        lekcje = (self.coordinator.data or {}).get("tematy_lekcji", [])
+        dzis = date.today().strftime("%Y-%m-%d")
+        ostatni_dzien = lekcje[0]["data"] if lekcje else None
+        return {
+            "lekcje": lekcje,
+            "dzisiaj": [l for l in lekcje if l.get("data") == dzis],
+            "ostatni_dzien": ostatni_dzien,
+            "lekcje_ostatniego_dnia": [l for l in lekcje if l.get("data") == ostatni_dzien],
+            "nieobecnosci": [l for l in lekcje if l.get("obecnosc") in ("nb", "u")],
         }
 
 
