@@ -104,7 +104,7 @@ def _parse_completed_lessons(html: str) -> list:
     return lessons
 
 
-PLATFORMS = ["sensor", "calendar", "todo", "button", "switch"]
+PLATFORMS = ["sensor", "calendar", "todo", "button", "switch", "binary_sensor"]
 
 CONFIG_SCHEMA = vol.Schema(
     {

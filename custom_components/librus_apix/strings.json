@@ -27,7 +27,8 @@
           "fetch_messages_count": "Number of messages to fetch from Librus (max 25)",
           "fetch_messages_content": "Fetch full message content (Marks them as read in Librus!)",
           "ai_summary_enabled": "Enable Weekly AI Summary",
-          "ai_agent_id": "AI Assistant Service ID (e.g. conversation.openai)"
+          "ai_agent_id": "AI Assistant Service ID (e.g. conversation.openai)",
+          "days_before_exam_study": "How many days before the exam to remind about studying? (0 = disabled)"
         }
       }
     }

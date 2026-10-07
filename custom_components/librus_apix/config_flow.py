@@ -114,6 +114,10 @@ class LibrusApixOptionsFlowHandler(config_entries.OptionsFlow):
                     "ai_agent_id",
                     default=self.entry.options.get("ai_agent_id", "conversation.home_assistant"),
                 ): str,
+                vol.Optional(
+                    "days_before_exam_study",
+                    default=self.entry.options.get("days_before_exam_study", 2),
+                ): vol.All(vol.Coerce(int), vol.Range(min=0, max=7)),
             }
         )
 
