@@ -52,15 +52,24 @@ Format odpowiedzi:
 
     _LOGGER.debug("Wysyłanie zapytania do AI (%s)...", agent_id)
     try:
-        response = await conversation.async_process(
-            hass,
-            text=prompt,
-            conversation_id=None,
-            context=None,
-            agent_id=agent_id if agent_id else None
+        service_data = {"text": prompt}
+        if agent_id:
+            service_data["agent_id"] = agent_id
+            
+        response = await hass.services.async_call(
+            "conversation",
+            "process",
+            service_data,
+            blocking=True,
+            return_response=True
         )
         
-        result_text = response.response.speech.get("plain", {}).get("speech", "")
+        result_text = ""
+        if isinstance(response, dict):
+            result_text = response.get("response", {}).get("speech", {}).get("plain", {}).get("speech", "")
+        elif hasattr(response, "response"):
+            result_text = response.response.speech.get("plain", {}).get("speech", "")
+            
         if not result_text:
             _LOGGER.error("Pusta odpowiedź od modelu AI.")
             return
