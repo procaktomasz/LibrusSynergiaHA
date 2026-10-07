@@ -7,6 +7,7 @@ W najnowszej wersji wprowadziliśmy także wsparcie dla **Sztucznej Inteligencji
 
 - 🤖 **Tygodniowe Podsumowanie AI (NOWOŚĆ)** - generowanie inteligentnych raportów z postępów (osobno dla rodzica i ucznia).
 - 🧠 **Adaptacyjne odświeżanie i Cache (NOWOŚĆ)** - inteligentne odpytywanie Librusa (rzadziej w nocy) i odporność na awarie dziennika.
+- 🎮 **Nauka i To-Do (NOWOŚĆ)** - interaktywna lista "Przygotowanie do lekcji" przypominająca o sprawdzianach (gamifikacja).
 - 📬 **Pobieranie treści wiadomości (NOWOŚĆ)** - nowa usługa `get_message` i pełna kontrola nad statusem "przeczytane".
 - 🚨 **Uwagi o zachowaniu (NOWOŚĆ)** - nowy czujnik monitorujący uwagi pozytywne i negatywne.
 - ⚡ **Zdarzenia / Events (NOWOŚĆ)** - automatyzacje oparte na eventach (np. `librus_apix_nowa_ocena`).
@@ -39,11 +40,23 @@ Integracja tworzy następujące sensory:
 | `sensor.librus_ai_summary_uczen` | (NOWOŚĆ) Inteligentny raport motywujący dla ucznia | Pełny tekst raportu |
 | `calendar.*_calendar_timetable` | Wbudowany kalendarz lekcji ucznia | wydarzenia |
 | `calendar.*_calendar_schedule` | Wbudowany kalendarz sprawdzianów i wydarzeń | wydarzenia |
-| `todo.*_todo_homework` | Systemowa lista zadań domowych z terminami oddania | lista zadań |
+| `todo.*_todo_zadania_domowe_to_do` | Systemowa lista zadań domowych z terminami oddania | lista zadań |
+| `todo.*_todo_nauka_to_do` | (NOWOŚĆ) Systemowa lista przygotowań do sprawdzianów | przypomnienia |
+| `binary_sensor.*_nauka_odrobiona` | (NOWOŚĆ) Czujnik informujący, czy uczeń odrobił naukę | ON / OFF |
 | `button.*_generuj_podsumowanie_ai` | (NOWOŚĆ) Przycisk generujący raport AI | - |
 | `switch.*_automatyczne_podsumowanie_ai`| (NOWOŚĆ) Przełącznik automatycznego raportowania AI | - |
 
 Sensory średnich mają `state_class: measurement` — HA automatycznie rysuje dla nich wykres historyczny po kliknięciu w encję.
+
+### 📚 Moduł Nauki i Zadań (To-Do)
+
+Integracja dostarcza interaktywne listy zadań (To-Do) połączone z kalendarzem Librusa, pozwalające na tworzenie automatyzacji opartych na gamifikacji (np. blokada konsoli, dopóki sprawdziany nie zostaną "odklikane").
+
+1. **Zadania domowe (`todo.librus_[uczen]_zadania_domowe_to_do`)** – Automatycznie synchronizowana, podglądowa lista bieżących zadań nadanych przez nauczycieli w systemie. (Z powodu ograniczeń API Librusa, jest tylko do odczytu).
+2. **Przygotowanie do lekcji (`todo.librus_[uczen]_przygotowanie_do_lekcji_to_do`)** – *[NOWOŚĆ]* Interaktywna lista wyzwań. Integracja automatycznie generuje i dodaje przypomnienia o nauce do każdego zbliżającego się w Terminarzu sprawdzianu, kartkówki czy klasówki. W Opcjach integracji sam ustalasz, na ile dni przed sprawdzianem przypomnienie ma trafić na listę. Uczeń może samodzielnie wykreślić ten punkt jako zrobiony bezpośrednio w interfejsie HA (stan zapisuje się na stałe).
+
+🎮 **Wskazówka:** Do dyspozycji masz ukrytą encję `binary_sensor.librus_[uczen]_nauka_odrobiona`. Przyjmuje ona stan `WŁĄCZONY (on)` tylko wtedy, gdy na interaktywnej liście przygotowań do lekcji nie zalegają żadne nieodkliknięte sprawdziany z nadchodzących dni. 
+To najprostsza metoda na stworzenie w Home Assistant warunku blokującego dostęp do sprzętu rozrywkowego!
 
 ## 📦 Instalacja
 
@@ -547,6 +560,7 @@ MIT License - patrz [LICENSE](LICENSE)
 ### v3.0 (Najnowsza)
 - 🤖 Integracja AI (Profile dla rodzica i ucznia).
 - 🧠 Adaptacyjny Cache zapobiegający problemom z 500 Internal Server Error od Librusa w godzinach porannych.
+- 🎮 Lista wyzwań i nauki (To-Do) wspierająca gamifikację dla uczniów oraz czujnik binarny "Nauka Odrobiona".
 - 🚨 Czujnik Uwag o Zachowaniu.
 - 📬 Nowa usługa `get_message` i pełna kontrola przeczytanych wiadomości.
 - ⚡ Szybkie zdarzenia (Events) dla powiadomień bez skomplikowanych template'ów w HA.
