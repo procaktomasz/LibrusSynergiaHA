@@ -1148,6 +1148,7 @@ class LibrusAISummarySensor(RestoreEntity, SensorEntity):
         if self._unsub_dispatcher:
             self._unsub_dispatcher()
 
+    @callback
     def _handle_summary_update(self, summaries: dict) -> None:
         """Aktualizacja stanu na podstawie wygenerowanych danych z AI."""
         text = summaries.get(self._target, "Brak danych")
