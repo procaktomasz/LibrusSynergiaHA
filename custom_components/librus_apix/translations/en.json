@@ -25,7 +25,9 @@
         "description": "Configure additional options for the integration.",
         "data": {
           "fetch_messages_count": "Number of messages to fetch from Librus (higher number slows down startup, recommended ~10, max 25)",
-          "fetch_messages_content": "Fetch full message content (Marks them as read in Librus system!)"
+          "fetch_messages_content": "Fetch full message content (Marks them as read in Librus system!)",
+          "ai_summary_enabled": "Enable Weekly AI Summary (Generates weekly report for grades and attendance)",
+          "ai_agent_id": "AI Assistant Service ID (e.g. conversation.openai)"
         }
       }
     }

@@ -104,7 +104,7 @@ def _parse_completed_lessons(html: str) -> list:
     return lessons
 
 
-PLATFORMS = ["sensor", "calendar", "todo", "button"]
+PLATFORMS = ["sensor", "calendar", "todo", "button", "switch"]
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -540,6 +540,46 @@ class LibrusApiClient:
             return await loop.run_in_executor(None, _fetch)
         except Exception as ex:
             _LOGGER.warning("ZŚK: nie udało się pobrać: %s", ex)
+            return []
+
+    async def async_get_notices(self):
+        """Pobierz uwagi o zachowaniu z gateway API."""
+        try:
+            if not self._client or not self._token:
+                if not await self.async_authenticate():
+                    return []
+            client = self._client
+            loop = asyncio.get_running_loop()
+
+            def _fetch():
+                oauth = client.refresh_oauth()
+                if oauth:
+                    client.cookies["oauth_token"] = oauth
+                resp = client.get(f"{client.BASE_URL}/gateway/api/2.0/Notices")
+                payload = resp.json() or {}
+                data = payload.get("Notices", [])
+                
+                # Czasem zalezy to od API, spróbujmy tez innej sciezki:
+                if not data and "data" in payload:
+                    data = payload.get("data", [])
+                    
+                result = []
+                for notice in data:
+                    cat = notice.get("Category", {})
+                    teacher = notice.get("Teacher", {})
+                    
+                    result.append({
+                        "data": notice.get("CreationDate", "")[:10],
+                        "nauczyciel": f"{teacher.get('FirstName', '')} {teacher.get('LastName', '')}".strip(),
+                        "kategoria": cat.get("Name", "Uwaga"),
+                        "tresc": notice.get("Content", ""),
+                        "typ": cat.get("Type", "Neutral") # Możliwe wartosci: Positive, Negative, Neutral
+                    })
+                return result
+
+            return await loop.run_in_executor(None, _fetch)
+        except Exception as ex:
+            _LOGGER.warning("Uwagi: nie udało się pobrać uwag: %s", ex)
             return []
 
     async def async_get_timetable(self):
@@ -1034,6 +1074,50 @@ async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:
         if not await client.async_authenticate():
             _LOGGER.error("Failed to authenticate")
             return False
+
+    async def handle_get_message(call):
+        """Obsluga wywolania przyslugiwania wiadomosci."""
+        url = call.data.get("url")
+        if not url:
+            _LOGGER.error("Brak URL wiadomosci")
+            return
+            
+        # Szukamy klienta
+        client = None
+        for entry_id, entry_data in hass.data[DOMAIN].items():
+            if isinstance(entry_data, LibrusApiClient):
+                client = entry_data
+                break
+                
+        if not client:
+            _LOGGER.error("Brak skonfigurowanego klienta Librus")
+            return
+            
+        if not client._client or not client._token:
+            if not await client.async_authenticate():
+                _LOGGER.error("Nie udalo sie uwierzytelnic")
+                return
+                
+        try:
+            from librus_apix.messages import message_content
+            import asyncio
+            loop = asyncio.get_running_loop()
+            msg_data = await loop.run_in_executor(None, message_content, client._client, url)
+            
+            content_str = msg_data.content if hasattr(msg_data, 'content') else str(msg_data)
+            _LOGGER.info("Pobrano wiadomosc z %s", url)
+            
+            # Fire event to let user know message was read
+            hass.bus.async_fire(
+                f"{DOMAIN}_message_read",
+                {"url": url, "content": content_str}
+            )
+            
+            return {"content": content_str}
+        except Exception as ex:
+            _LOGGER.error("Blad pobierania wiadomosci %s: %s", url, ex)
+
+    hass.services.async_register(DOMAIN, "get_message", handle_get_message)
 
     return True
 

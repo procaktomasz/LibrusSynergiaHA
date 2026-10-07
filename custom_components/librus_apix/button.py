@@ -22,9 +22,12 @@ async def async_setup_entry(
     client = hass.data[DOMAIN][config_entry.entry_id]
     coordinator = client.coordinator
     
-    async_add_entities([
-        LibrusRefreshButton(coordinator, config_entry)
-    ])
+    buttons = [LibrusRefreshButton(coordinator, config_entry)]
+    
+    if config_entry.options.get("ai_summary_enabled", False):
+        buttons.append(LibrusGenerateAISummaryButton(coordinator, config_entry))
+        
+    async_add_entities(buttons)
 
 
 class LibrusRefreshButton(CoordinatorEntity, ButtonEntity):
@@ -46,3 +49,31 @@ class LibrusRefreshButton(CoordinatorEntity, ButtonEntity):
         """Wymuś odświeżenie danych u koordynatora."""
         _LOGGER.info("Wymuszenie ręcznego odświeżenia danych Librus...")
         await self.coordinator.async_request_refresh()
+
+class LibrusGenerateAISummaryButton(CoordinatorEntity, ButtonEntity):
+    """Przycisk do ręcznego generowania podsumowania AI."""
+
+    def __init__(self, coordinator, config_entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        self._attr_has_entity_name = False
+        self._attr_name = "Generuj podsumowanie AI"
+        self._attr_icon = "mdi:robot-outline"
+        self._attr_unique_id = f"{config_entry.entry_id}_generate_ai_summary"
+
+    @property
+    def device_info(self) -> Dict[str, Any]:
+        return _device_info(self.coordinator, self._config_entry)
+
+    async def async_press(self) -> None:
+        """Uruchom wyliczanie podsumowania AI."""
+        _LOGGER.info("Uruchamianie generowania podsumowania AI...")
+        from .ai_summary import async_generate_summary
+        
+        agent_id = self._config_entry.options.get("ai_agent_id", "conversation.home_assistant")
+        await async_generate_summary(
+            self.hass, 
+            self._config_entry.entry_id, 
+            self.coordinator.data,
+            agent_id
+        )

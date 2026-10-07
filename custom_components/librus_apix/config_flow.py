@@ -7,6 +7,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers import selector
 
 from librus_apix.client import new_client
 
@@ -105,6 +106,14 @@ class LibrusApixOptionsFlowHandler(config_entries.OptionsFlow):
                     "fetch_messages_content",
                     default=self.entry.options.get("fetch_messages_content", False),
                 ): bool,
+                vol.Optional(
+                    "ai_summary_enabled",
+                    default=self.entry.options.get("ai_summary_enabled", False),
+                ): bool,
+                vol.Optional(
+                    "ai_agent_id",
+                    default=self.entry.options.get("ai_agent_id", "conversation.home_assistant"),
+                ): str,
             }
         )
 

@@ -13,6 +13,7 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
 )
+from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN, SCAN_INTERVAL
 
@@ -149,6 +150,14 @@ async def async_setup_entry(
     # Czujnik globalnej sredniej
     entities.append(LibrusSredniaOcenSensor(coordinator, config_entry))
 
+    # Uwagi o zachowaniu
+    entities.append(LibrusUwagiSensor(coordinator, config_entry))
+
+    # Opcjonalne: Czujniki AI
+    if config_entry.options.get("ai_summary_enabled", False):
+        entities.append(LibrusAISummarySensor(config_entry, "rodzic"))
+        entities.append(LibrusAISummarySensor(config_entry, "uczen"))
+
     async_add_entities(entities)
 
 
@@ -169,6 +178,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
         self._seen_homework_ids: set = set()
         self._seen_schedule_ids: set = set()
         self._first_run: bool = True
+        self.store = Store(hass, 1, f"{DOMAIN}_cache_{self.client.username}")
         super().__init__(
             hass,
             _LOGGER,
@@ -189,10 +199,22 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
             homework_raw = await self.client.async_get_homework()
             schedule_raw = await self.client.async_get_schedule()
             plan_lekcji_raw = await self.client.async_get_timetable()
+            
+            # Restore from cache if failed
+            if plan_lekcji_raw is None:
+                cached_data = await self.store.async_load()
+                if cached_data and "plan_lekcji" in cached_data:
+                    plan_lekcji_raw = cached_data["plan_lekcji"]
+                    _LOGGER.warning("Nie udało się pobrać planu lekcji. Używam danych z cache.")
+            elif plan_lekcji_raw:
+                # Save to cache if successful
+                await self.store.async_save({"plan_lekcji": plan_lekcji_raw})
+
             frekwencja_raw = await self.client.async_get_attendance()
             ogloszenia_raw = await self.client.async_get_announcements()
             tematy_raw = await self.client.async_get_completed_lessons()
             frekwencja_stat_raw = await self.client.async_get_attendance_stats()
+            uwagi_raw = await getattr(self.client, "async_get_notices", lambda: None)()
 
             prev = self.data or {}
 
@@ -242,6 +264,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
             frekwencja = frekwencja_raw if frekwencja_raw is not None else prev.get("frekwencja", [])
             ogloszenia = ogloszenia_raw if ogloszenia_raw is not None else prev.get("ogloszenia", [])
             tematy_lekcji = tematy_raw if tematy_raw is not None else prev.get("tematy_lekcji", [])
+            uwagi = uwagi_raw if uwagi_raw is not None else prev.get("uwagi", [])
             frekwencja_stat = (
                 _frekwencja_statystyki(frekwencja_stat_raw, current_sem)
                 if frekwencja_stat_raw is not None
@@ -337,6 +360,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 "frekwencja": frekwencja,
                 "ogloszenia": ogloszenia,
                 "tematy_lekcji": tematy_lekcji,
+                "uwagi": uwagi,
                 "frekwencja_stat": frekwencja_stat,
                 "semestr_biezacy": current_sem,
             }
@@ -363,6 +387,15 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 self._fire_events(wiadomosci, grades, uczen)
                 self._fire_homework_events(zadania, uczen)
                 self._fire_schedule_events(terminarz, uczen)
+
+            # Adaptacyjne odświeżanie
+            from datetime import datetime, timedelta
+            now = datetime.now()
+            # W dni robocze między 7:00 a 16:00 - co 15 minut
+            if 7 <= now.hour < 16 and now.weekday() < 5:
+                self.update_interval = timedelta(minutes=15)
+            else:
+                self.update_interval = SCAN_INTERVAL
 
             return result
 
@@ -1024,4 +1057,105 @@ class LibrusOgloszeniaSensor(CoordinatorEntity, SensorEntity):
         return {
             "lista_ogloszen": ogloszenia,
         }
+
+
+class LibrusUwagiSensor(CoordinatorEntity, SensorEntity):
+    """Czujnik uwag o zachowaniu."""
+
+    def __init__(self, coordinator: LibrusDataUpdateCoordinator, config_entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        self._attr_has_entity_name = False
+        self._attr_name = "Uwagi o zachowaniu"
+        self._attr_unique_id = f"{config_entry.entry_id}_uwagi"
+        self._attr_icon = "mdi:alert-circle"
+
+    @property
+    def device_info(self) -> Dict[str, Any]:
+        return _device_info(self.coordinator, self._config_entry)
+
+    @property
+    def native_value(self) -> str:
+        data = self.coordinator.data or {}
+        uwagi = data.get("uwagi", [])
+        return str(len(uwagi))
+
+    @property
+    def extra_state_attributes(self) -> Dict[str, Any]:
+        data = self.coordinator.data or {}
+        uwagi = data.get("uwagi", [])
+        
+        pozytywne = [u for u in uwagi if str(u.get("typ")).lower() == "positive"]
+        negatywne = [u for u in uwagi if str(u.get("typ")).lower() == "negative"]
+        neutralne = [u for u in uwagi if str(u.get("typ")).lower() not in ("positive", "negative")]
+
+        return {
+            "lista_uwag": uwagi,
+            "liczba_pozytywnych": len(pozytywne),
+            "liczba_negatywnych": len(negatywne),
+            "liczba_neutralnych": len(neutralne),
+            "najnowsza_uwaga": uwagi[0] if uwagi else None
+        }
+
+
+from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+class LibrusAISummarySensor(RestoreEntity, SensorEntity):
+    """Czujnik z wygenerowanym podsumowaniem AI."""
+
+    def __init__(self, config_entry: ConfigEntry, target: str) -> None:
+        """Inicjalizacja."""
+        self._config_entry = config_entry
+        self._target = target
+        self._attr_has_entity_name = False
+        self._attr_name = f"Podsumowanie AI ({'Rodzic' if target == 'rodzic' else 'Uczeń'})"
+        self._attr_unique_id = f"{config_entry.entry_id}_ai_summary_{target}"
+        self._attr_icon = "mdi:robot"
+        self._attr_native_value = "Oczekuje na wygenerowanie..."
+        self._attr_extra_state_attributes = {"pełny_tekst": "Oczekuje na wygenerowanie..."}
+        self._unsub_dispatcher = None
+
+    @property
+    def device_info(self) -> Dict[str, Any]:
+        """Aby urządzenie pokazywało się pod integracją."""
+        return {
+            "identifiers": {(DOMAIN, self._config_entry.entry_id)},
+            "name": "Librus",
+            "manufacturer": "Librus",
+            "model": "Synergia",
+        }
+
+    async def async_added_to_hass(self) -> None:
+        """Kiedy encja jest dodana do HA."""
+        await super().async_added_to_hass()
+        
+        # Odtworzenie ostatniego stanu po restarcie
+        last_state = await self.async_get_last_state()
+        if last_state:
+            self._attr_native_value = last_state.state
+            if "pełny_tekst" in last_state.attributes:
+                self._attr_extra_state_attributes["pełny_tekst"] = last_state.attributes["pełny_tekst"]
+        
+        # Nasłuchiwanie na sygnał od przycisku generowania
+        signal = f"librus_ai_summary_{self._config_entry.entry_id}"
+        self._unsub_dispatcher = async_dispatcher_connect(
+            self.hass, signal, self._handle_summary_update
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Kiedy encja jest usuwana."""
+        if self._unsub_dispatcher:
+            self._unsub_dispatcher()
+
+    def _handle_summary_update(self, summaries: dict) -> None:
+        """Aktualizacja stanu na podstawie wygenerowanych danych z AI."""
+        text = summaries.get(self._target, "Brak danych")
+        
+        # Ograniczenie native_value do 255 znaków
+        short_text = text if len(text) <= 250 else text[:247] + "..."
+        
+        self._attr_native_value = short_text
+        self._attr_extra_state_attributes["pełny_tekst"] = text
+        self.async_write_ha_state()
 

@@ -1,0 +1,10 @@
+get_message:
+  name: Pobierz wiadomość
+  description: Pobiera pełną treść wiadomości, co spowoduje oznaczenie jej jako 'przeczytanej' w systemie Librus.
+  fields:
+    url:
+      name: URL / Odnośnik
+      description: Pełny link lub href wiadomości do pobrania z Librusa (znajdziesz go m.in. jako atrybut czujnika).
+      required: true
+      selector:
+        text:

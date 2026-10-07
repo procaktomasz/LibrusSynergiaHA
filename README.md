@@ -1,19 +1,21 @@
 # 🎓 Librus APIX Integration for Home Assistant
 
+Integracja Home Assistant z systemem Librus Synergia, umożliwiająca monitorowanie ocen, wiadomości, frekwencji i innych danych szkolnych. 
+W najnowszej wersji wprowadziliśmy także wsparcie dla **Sztucznej Inteligencji** do analizy i podsumowywania wyników!
 
-Integracja Home Assistant z systemem Librus Synergia, umożliwiająca monitorowanie ocen, wiadomości i innych danych szkolnych.
+## ✨ Funkcje i Nowości (v3.0)
 
-## ✨ Funkcje
-
+- 🤖 **Tygodniowe Podsumowanie AI (NOWOŚĆ)** - generowanie inteligentnych raportów z postępów (osobno dla rodzica i ucznia).
+- 🧠 **Adaptacyjne odświeżanie i Cache (NOWOŚĆ)** - inteligentne odpytywanie Librusa (rzadziej w nocy) i odporność na awarie dziennika.
+- 📬 **Pobieranie treści wiadomości (NOWOŚĆ)** - nowa usługa `get_message` i pełna kontrola nad statusem "przeczytane".
+- 🚨 **Uwagi o zachowaniu (NOWOŚĆ)** - nowy czujnik monitorujący uwagi pozytywne i negatywne.
+- ⚡ **Zdarzenia / Events (NOWOŚĆ)** - automatyzacje oparte na eventach (np. `librus_apix_nowa_ocena`).
 - 📊 **Monitoring ocen** - wszystkie oceny ze wszystkich przedmiotów
 - 📈 **Statystyki** - średnie ocen, liczba ocen, trend
-- 📧 **Wiadomości** - najnowsze wiadomości z dziennika
 - 📅 **Kalendarze** - wbudowany plan lekcji (z obsługą zastępstw!) i terminarz w HA
 - ✅ **Zadania domowe** - wsparcie dla systemowych list To-Do
 - 📢 **Ogłoszenia** - odczyt szkolnej tablicy ogłoszeń
 - 👨‍🎓 **Frekwencja** - monitorowanie spóźnień i nieobecności
-- 🔔 **Powiadomienia** - automatyczne powiadomienia o nowych ocenach/wiadomościach
-- 🏠 **Dashboard** - piękne karty w Home Assistant
 
 ## 🚀 Sensory
 
@@ -25,16 +27,21 @@ Integracja tworzy następujące sensory:
 | `sensor.librus_szczesliwy_numerek` | Szczęśliwy numerek dnia | numer |
 | `sensor.librus_oceny` | Wszystkie oceny bieżącego semestru | liczba ocen |
 | `sensor.librus_srednia_ocen` | **Globalna średnia** ze wszystkich przedmiotów | float (wykres 📈) |
-| `sensor.librus_wiadomosci` | Ostatnie wiadomości (domyślnie 10, konfigurowalne do 25 w opcjach) | liczba nieprzeczytanych |
+| `sensor.librus_wiadomosci` | Ostatnie wiadomości (domyślnie 10, konfigurowalne) | liczba nieprzeczytanych |
+| `sensor.librus_uwagi` | (NOWOŚĆ) Uwagi o zachowaniu z podziałem na typy | liczba uwag |
 | `sensor.librus_<przedmiot>` | Oceny z danego przedmiotu (np. `sensor.librus_matematyka`) | lista ocen: "4, 3+, 5" |
-| `sensor.librus_srednia_<przedmiot>` | **Średnia** z danego przedmiotu (np. `sensor.librus_srednia_matematyka`) | float (wykres 📈) |
+| `sensor.librus_srednia_<przedmiot>` | **Średnia** z danego przedmiotu | float (wykres 📈) |
 | `sensor.librus_plan_lekcji` | Plan lekcji na pełne 7 dni z rozbiciem na dni tygodnia | - |
-| `sensor.librus_frekwencja` | Lista nieobecności i spóźnień, rozbicie na usprawiedliwione / nieusprawiedliwione / zwolnienia oraz **frekwencja w %** (semestr i rok) | liczba nieobecności |
-| `sensor.librus_tematy_lekcji` | **Tematy zrealizowanych lekcji** z ostatnich 7 dni wraz z wpisem frekwencji przy każdej lekcji (np. `nb` tylko na 1. lekcji) i zastępcą, jeśli lekcja była zastępstwem | liczba lekcji dzisiaj |
+| `sensor.librus_frekwencja` | Lista nieobecności i spóźnień, rozbicie oraz **frekwencja w %** | liczba nieobecności |
+| `sensor.librus_tematy_lekcji` | **Tematy zrealizowanych lekcji** z ostatnich 7 dni | liczba lekcji dzisiaj |
 | `sensor.librus_ogloszenia` | Najnowsze ogłoszenia | liczba ogłoszeń |
+| `sensor.librus_ai_summary_rodzic` | (NOWOŚĆ) Inteligentny raport dla rodzica | Pełny tekst raportu |
+| `sensor.librus_ai_summary_uczen` | (NOWOŚĆ) Inteligentny raport motywujący dla ucznia | Pełny tekst raportu |
 | `calendar.*_calendar_timetable` | Wbudowany kalendarz lekcji ucznia | wydarzenia |
 | `calendar.*_calendar_schedule` | Wbudowany kalendarz sprawdzianów i wydarzeń | wydarzenia |
 | `todo.*_todo_homework` | Systemowa lista zadań domowych z terminami oddania | lista zadań |
+| `button.*_generuj_podsumowanie_ai` | (NOWOŚĆ) Przycisk generujący raport AI | - |
+| `switch.*_automatyczne_podsumowanie_ai`| (NOWOŚĆ) Przełącznik automatycznego raportowania AI | - |
 
 Sensory średnich mają `state_class: measurement` — HA automatycznie rysuje dla nich wykres historyczny po kliknięciu w encję.
 
@@ -72,13 +79,13 @@ Lub ręcznie:
 
 1. W Home Assistant: **Konfiguracja** > **Integracje** > **Dodaj integrację**
 2. Wyszukaj **"Librus APIX"**  
-3. Podaj swoje dane logowania do Librus Synergia:
-   - **Login/Username**: Twój login do Librus
-   - **Hasło**: Twoje hasło do Librus
+3. Podaj swoje dane logowania do Librus Synergia.
 4. Kliknij **"Prześlij"**
 
+*(Aby włączyć Podsumowania AI, po zainstalowaniu kliknij "Konfiguruj" na karcie integracji i zaznacz odpowiednie opcje).*
+
 ### ⚠️ Ważne: Optymalizacja bazy danych (Recorder)
-Niektóre sensory tej integracji (np. plan lekcji, wiadomości, terminarz) przechowują w atrybutach potężne struktury JSON. Ze względu na ograniczenia architektury Home Assistanta, częste zapisywanie stanu tych sensorów powoduje drastyczne powiększanie się rozmiaru bazy danych. **Zaleca się stanowczo** wykluczenie tych ciężkich sensorów z zapisu do historii, dodając poniższy kod do pliku `configuration.yaml`:
+Niektóre sensory przechowują potężne struktury JSON. Zaleca się wykluczenie ich z zapisu do historii w pliku `configuration.yaml`:
 
 ```yaml
 recorder:
@@ -93,7 +100,57 @@ recorder:
       - sensor.librus_*_tematy_lekcji
       - sensor.librus_*_frekwencja
 ```
+
 ## 📊 Przykładowe karty Lovelace
+
+### NOWOŚĆ: Karta Tygodniowego Podsumowania AI
+```yaml
+type: custom:stack-in-card
+cards:
+  - type: custom:mushroom-title-card
+    title: 🤖 Podsumowanie Tygodnia (AI)
+    subtitle: Co słychać w szkole?
+  - type: markdown
+    content: >
+      {% set profil = 'imie_nazwisko' %}
+      {% set encja = 'sensor.librus_' ~ profil ~ '_ai_summary_rodzic' %}
+      {% set raport = state_attr(encja, 'pełny_tekst') %}
+      
+      {% if raport %}
+        {{ raport }}
+      {% else %}
+        Asystent AI jeszcze nie wygenerował raportu. Naciśnij przycisk odświeżania!
+      {% endif %}
+  - type: button
+    tap_action:
+      action: toggle
+    entity: button.librus_imie_nazwisko_generuj_podsumowanie_ai
+    name: Generuj nowe podsumowanie
+    icon: mdi:robot-excited
+```
+
+### NOWOŚĆ: Karta Uwag o Zachowaniu
+```yaml
+type: markdown
+title: 🚨 Uwagi o Zachowaniu
+content: |
+  {% set profil = 'imie_nazwisko' %}
+  {% set encja = 'sensor.librus_' ~ profil ~ '_uwagi' %}
+  {% set uwagi = state_attr(encja, 'lista_uwag') %}
+
+  {% if uwagi == none %}
+  ⚠️ Błąd: Nie znaleziono encji.
+  {% elif uwagi | length > 0 %}
+  {% for u in uwagi %}
+  **{{ u.data }}** ({{ u.nauczyciel }}) 
+  > {% if u.typ == 'Positive' %}🟢{% elif u.typ == 'Negative' %}🔴{% else %}⚪{% endif %} **{{ u.kategoria }}**
+  > {{ u.tresc | replace('\n', ' ') }}
+  
+  {% endfor %}
+  {% else %}
+  ✅ Dziecko jest aniołem - brak uwag w dzienniku!
+  {% endif %}
+```
 
 ### Karta ocen i średnich
 
@@ -114,8 +171,6 @@ entities:
 ### Dynamiczna karta wszystkich ocen (Markdown)
 
 Ta karta automatycznie wylistuje wszystkie przedmioty, pokaże ich średnie oraz ciąg wystawionych ocen, naśladując wygląd tabeli prosto ze strony Librusa.
-
-> **WAŻNE:** Znajdź końcówkę nazwy swojej encji w **Developer Tools → States** (np. `janek_kowalski`). Przypisz ją do zmiennej `profil` na samym początku kodu.
 
 ```yaml
 type: markdown
@@ -139,7 +194,7 @@ content: |
   {%- endif %}
 ```
 
-> **Wskazówka:** Domyślnie Home Assistant dopasowuje szerokość tabel w kartach Markdown do ich zawartości tekstu (tabela nie rozciąga się na 100% szerokości karty). Aby zmusić tabelę do zajęcia pełnej szerokości, użyj popularnego dodatku **card-mod** (do pobrania w HACS) i dodaj na końcu konfiguracji karty poniższy kod:
+> **Wskazówka:** Domyślnie Home Assistant dopasowuje szerokość tabel w kartach Markdown do ich zawartości tekstu. Aby zmusić tabelę do zajęcia pełnej szerokości, użyj popularnego dodatku **card-mod**:
 > ```yaml
 > card_mod:
 >   style:
@@ -151,9 +206,6 @@ content: |
 
 Ta karta automatycznie dostosowuje się do ilości wiadomości i nie wyświetla pustych wierszy!
 
-> **WAŻNE:** Znajdź nazwę encji w **Developer Tools → States** (szukaj `wiadomosci`). 
-> Pamiętaj, aby we wszystkich poniższych kodach zmienić `sensor.librus_imie_nazwisko_...` na poprawną nazwę swojej encji!
-
 ```yaml
 type: markdown
 title: 📬 Wiadomości Librus
@@ -163,7 +215,7 @@ content: |
   {% set msgs = state_attr(encja, 'wiadomosci') %}
 
   {% if msgs == none %}
-  ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`. Sprawdź wpisany profil!
+  ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`.
   {% else %}
   {% set nieprzeczytane = state_attr(encja, 'liczba_nieprzeczytanych') | default(0) %}
   **Status:** {% if nieprzeczytane > 0 %}🔴 {{ nieprzeczytane }} nieprzeczytanych{% else %}⚫ Wszystkie przeczytane{% endif %}
@@ -182,14 +234,9 @@ content: |
   {% endif %}
 ```
 
-Legenda ikon:
-- 🔴 czerwona = nieprzeczytana
-- ⚫ szara = przeczytana
-- 📎 = ma załącznik
-
 ### Karta wiadomości (Markdown - Pełna treść)
 
-> **WAŻNE:** Aby poniższa karta działała poprawnie, musisz najpierw wejść w Ustawienia -> Urządzenia oraz usługi -> Librus Synergia HA -> kliknąć **Konfiguruj** i włączyć opcję *"Pobieraj pełną treść wiadomości"*. W przeciwnym razie treść będzie pusta.
+> **WAŻNE:** Aby poniższa karta działała poprawnie, musisz włączyć opcję *"Pobieraj pełną treść wiadomości"* w ustawieniach integracji.
 
 ```yaml
 type: markdown
@@ -200,7 +247,7 @@ content: |
   {% set msgs = state_attr(encja, 'wiadomosci') %}
 
   {% if msgs == none %}
-  ❌ **Błąd:** Nie znaleziono encji `{{ encja }}`. Sprawdź wpisany profil!
+  ❌ **Błąd:** Nie znaleziono encji `{{ encja }}`.
   {% else %}
   {% set nieprzeczytane = state_attr(encja, 'liczba_nieprzeczytanych') | default(0) %}
   **Status:** {% if nieprzeczytane > 0 %}🔴 {{ nieprzeczytane }} nieprzeczytanych{% else %}🟢 Wszystkie przeczytane{% endif %}
@@ -223,9 +270,6 @@ content: |
 
 ### Karta terminarza (wszystkie zdarzenia)
 
-> **WAŻNE:** Znajdź nazwę encji w **Developer Tools → States** (szukaj `terminarz`).
-> Zastąp `sensor.librus_imie_nazwisko_terminarz` w poniższym kodzie swoją własną nazwą!
-
 ```yaml
 type: markdown
 title: 📅 Terminarz
@@ -235,7 +279,7 @@ content: |
   {% set zdarzenia = state_attr(encja, 'zdarzenia') %}
 
   {% if zdarzenia == none %}
-  ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`. Sprawdź wpisany profil!
+  ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`.
   {% elif zdarzenia | length > 0 %}
   | Data | Dzień | Typ | Przedmiot | Opis |
   |------|-------|-----|-----------|------|
@@ -248,8 +292,6 @@ content: |
 
 ### Karta sprawdzianów i klasówek (bez dni wolnych)
 
-> **WAŻNE:** Pamiętaj, aby podmienić w kodzie `sensor.librus_imie_nazwisko_terminarz` na nazwę z Twojego systemu!
-
 ```yaml
 type: markdown
 title: 📝 Sprawdziany i klasówki
@@ -259,7 +301,7 @@ content: |
   {% set zdarzenia = state_attr(encja, 'zdarzenia') %}
 
   {% if zdarzenia == none %}
-  ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`. Sprawdź wpisany profil!
+  ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`.
   {% else %}
   {% set typy_testow = ['Sprawdzian', 'Kartkówka', 'Klasówka', 'Praca klasowa'] %}
   {% set sprawdziany = zdarzenia | selectattr('tytul', 'in', typy_testow) | list %} 
@@ -277,8 +319,6 @@ content: |
 
 ### Karta natywnego Kalendarza (Home Assistant)
 
-> **WAŻNE:** Pamiętaj, aby podmienić encje na te przypisane do Twojego konta!
-
 Zamiast budować tabele markdown dla planu lekcji i sprawdzianów, możesz użyć systemowej karty kalendarza!
 ```yaml
 type: calendar
@@ -291,8 +331,6 @@ initial_view: dayGridMonth
 
 ### Karta Zadań Domowych (To-Do List)
 
-> **WAŻNE:** Pamiętaj, aby zmienić `imie_nazwisko` na swoje dane!
-
 Wyświetl natywną listę kontrolną prac domowych prosto z Librusa!
 ```yaml
 type: todo-list
@@ -301,8 +339,6 @@ title: ✅ Prace domowe
 ```
 
 ### Karta ogłoszeń szkolnych (Markdown)
-
-> **WAŻNE:** Pamiętaj, aby podmienić w kodzie `imie_nazwisko` na poprawne dane z Twoich encji!
 
 ```yaml
 type: markdown
@@ -313,7 +349,7 @@ content: |
   {% set ogl = state_attr(encja_ogl, 'lista_ogloszen') %}
 
   {% if ogl == none %}
-  ⚠️ **Błąd:** Nie znaleziono encji dla profilu `{{ profil }}`.
+  ⚠️ **Błąd:** Nie znaleziono encji.
   {% else %}
   {% if ogl | length > 0 %}
   {% for o in ogl %}
@@ -327,8 +363,6 @@ content: |
 
 ### Karta statystyk frekwencji (Markdown)
 
-> **WAŻNE:** Pamiętaj, aby podmienić w kodzie `imie_nazwisko` na poprawne dane z Twoich encji!
-
 ```yaml
 type: markdown
 title: 📊 Statystyki Frekwencji
@@ -337,7 +371,7 @@ content: |
   {% set encja_frek = 'sensor.librus_' ~ profil ~ '_frekwencja' %}
 
   {% if states(encja_frek) in ['unavailable', 'unknown'] %}
-  ⚠️ **Błąd:** Nie znaleziono encji dla profilu `{{ profil }}`.
+  ⚠️ **Błąd:** Nie znaleziono encji.
   {% else %}
   - **Frekwencja w semestrze:** {{ state_attr(encja_frek, 'frekwencja_procent') | default('-', true) }}%
   - **Spóźnienia:** {{ state_attr(encja_frek, 'liczba_spoznien') | default(0) }}
@@ -349,10 +383,6 @@ content: |
 
 ### Karta tematów lekcji (Markdown)
 
-Tematy zrealizowanych lekcji z ostatnich 7 dni. Przy lekcjach z nieobecnością (`nb`) lub usprawiedliwioną (`u`) widać symbol frekwencji, a 🔄 oznacza zastępstwo — przydatne, gdy dziecko spóźni się na pierwszą lekcję albo nadrabia materiał po chorobie.
-
-> **WAŻNE:** Pamiętaj, aby podmienić w kodzie `imie_nazwisko` na poprawne dane z Twoich encji!
-
 ```yaml
 type: markdown
 title: 📖 Tematy lekcji
@@ -360,7 +390,7 @@ content: |
   {% set profil = 'imie_nazwisko' %}
   {% set lekcje = state_attr('sensor.librus_' ~ profil ~ '_tematy_lekcji', 'lekcje') %}
   {% if lekcje == none %}
-  ⚠️ **Błąd:** Nie znaleziono encji dla profilu `{{ profil }}`.
+  ⚠️ **Błąd:** Nie znaleziono encji.
   {% else %}
   {% for dzien, lista in lekcje | groupby('data') | reverse %}
   #### {{ dzien }}
@@ -375,7 +405,7 @@ content: |
 
 ### Karta pełnego Planu Lekcji (7 dni) na własnym szablonie Markdown
 
-> **WAŻNE:** Zastąp `sensor.librus_imie_nazwisko_plan_lekcji` poprawną encją z Twojego panelu (Developer Tools → States)! Zastępstwa są automatycznie oznaczane w tabeli czytelną strzałką (np. `stara lekcja ➔ nowa lekcja`).
+> **WAŻNE:** Zastępstwa są automatycznie oznaczane w tabeli czytelną strzałką (np. `stara lekcja ➔ nowa lekcja`).
 
 ```yaml
 type: markdown
@@ -386,7 +416,7 @@ content: |
   {% set dni = state_attr(encja, 'kolejne_7_dni') %}
   
   {% if dni == none %}
-  ⚠️ **Błąd:** Nie znaleziono encji `{{ encja }}`. Upewnij się, że wpisano poprawny profil ucznia.
+  ⚠️ **Błąd:** Nie znaleziono encji.
   {% else %}
   {% for dzien in dni %}
   {% set lekcje = dzien.lekcje %}
@@ -406,8 +436,6 @@ content: |
 
 ### Wykres średniej z przedmiotu (Gauge)
 
-> **WAŻNE:** Zastąp `imie_nazwisko` oraz nazwę przedmiotu swoimi danymi!
-
 ```yaml
 type: gauge
 entity: sensor.librus_imie_nazwisko_srednia_matematyka
@@ -420,53 +448,22 @@ severity:
   red: 0
 ```
 
-## 🔔 Automatyzacje powiadomień na telefon
+## 🔔 Zdarzenia (Events) i Powiadomienia na telefon
 
-Integracja wysyła zdarzenia Home Assistant gdy pojawi się nowa wiadomość lub ocena.
-Zdarzenia są wykrywane przy każdym odświeżeniu (co 2h). Pierwsze uruchomienie tylko zapamiętuje stan — **nie wysyła duplikatów**.
-
-> **Test bez czekania:** Idź do **Developer Tools → Events**, Event type: `librus_apix_nowa_wiadomosc`, Event data jak poniżej i kliknij **Fire Event**.
-
-### 📬 Powiadomienie o nowej wiadomości
-
-Zdarzenie: `librus_apix_nowa_wiadomosc`  
-Dostępne dane: `uczen` (Imię i Nazwisko z profilu), `nadawca`, `temat`, `data`, `ma_zalacznik`
-
-> **Uwaga:** Treść wiadomości nie jest pobierana celowo — aby nie oznaczać wiadomości jako przeczytanych w Librusie.
-
-```yaml
-automation:
-  - alias: "Librus - nowa wiadomosc"
-    trigger:
-      - platform: event
-        event_type: librus_apix_nowa_wiadomosc
-    action:
-      - service: notify.mobile_app_NAZWA_TWOJEGO_TELEFONU
-        data:
-          title: "📬 Librus: nowa wiadomość"
-          message: >-
-            Dotyczy: {{ trigger.event.data.uczen | default('Dziecko') }}
-            {% set msg = state_attr('sensor.librus_IMIE_NAZWISKO_wiadomosci', 'wiadomosci')
-               | selectattr('nieprzeczytana', 'equalto', true) | list | first | default({}) %}
-            Od: {{ msg.nadawca | default('nieznany') }}
-            Temat: {{ msg.temat | default('brak') }}
-```
-
-> **Uwaga:** Powyższa wiadomość korzysta z globalnego parametru `uczen`, dzięki czemu od razu wiadomo, którego profilu dotyczy powiadomienie. Zamień w kodzie `sensor.librus_IMIE_NAZWISKO_wiadomosci` na nazwę swojego sensora, jeśli chcesz pobrać więcej szczegółów z atrybutów.
+Integracja od wersji 3.0 wysyła automatyczne zdarzenia (Events), kiedy wykryje nowości (bez generowania duplikatów).
 
 ### 📝 Powiadomienie o nowej ocenie
-
 Zdarzenie: `librus_apix_nowa_ocena`  
-Dostępne dane: `uczen` (Imię i Nazwisko z profilu), `przedmiot`, `ocena`, `data`, `kategoria`, `nauczyciel`
+Dostępne dane: `uczen`, `przedmiot`, `ocena`, `data`, `kategoria`, `nauczyciel`
 
 ```yaml
 automation:
-  - alias: "Librus - nowa ocena"
+  - alias: "Librus - Nowa Ocena"
     trigger:
-      platform: event
-      event_type: librus_apix_nowa_ocena
+      - platform: event
+        event_type: librus_apix_nowa_ocena
     action:
-      - service: notify.mobile_app_NAZWA_TWOJEGO_TELEFONU
+      - service: notify.notify
         data:
           title: "🎓 {{ trigger.event.data.uczen }} - nowa ocena {{ trigger.event.data.ocena }}"
           message: >-
@@ -476,20 +473,29 @@ automation:
             Nauczyciel: {{ trigger.event.data.nauczyciel }}
 ```
 
-> **Gdzie znaleźć nazwę telefonu?** HA → Settings → Devices & Services → Mobile App → nazwa urządzenia (np. `notify.mobile_app_samsung_galaxy_s24`)
+### 📬 Powiadomienie o nowej wiadomości
+Zdarzenie: `librus_apix_nowa_wiadomosc`  
+Dostępne dane: `uczen`, `nadawca`, `temat`, `data`, `ma_zalacznik`
 
-
+```yaml
+automation:
+  - alias: "Librus - nowa wiadomosc"
+    trigger:
+      - platform: event
+        event_type: librus_apix_nowa_wiadomosc
+    action:
+      - service: notify.notify
+        data:
+          title: "📬 Librus: nowa wiadomość"
+          message: >-
+            Dotyczy: {{ trigger.event.data.uczen | default('Dziecko') }}
+            Od: {{ trigger.event.data.nadawca | default('nieznany') }}
+            Temat: {{ trigger.event.data.temat | default('brak') }}
+```
 
 ## Zaawansowane: Harmonogram odpytywania Librusa
 
-Domyślnie integracja sprawdza nowości w Librusie co 2 godziny przez całą dobę. Jeśli chcesz oszczędzać zasoby lub odpytywać dziennik wyłącznie w wybranych godzinach (np. od 08:00 do 20:00) i wykluczyć weekendy, skorzystaj z natywnej automatyzacji Home Assistanta. 
-
-> ⚠️ **UWAGA:** Uważaj na to, jak często odpytujesz serwery! Zbyt częste pobieranie danych (np. co 5 czy 10 minut) generuje ogromny ruch sieciowy i może zostać potraktowane przez filtry antyspamowe systemu Librus jako atak DDoS, co skutkuje tymczasową blokadą Twojego adresu IP lub nawet bana na konto! Zalecany odstęp to minimum 1 godzina.
-
-1. Przejdź do **Ustawienia -> Urządzenia oraz usługi -> Librus Synergia HA**.
-2. Kliknij ikonę trzech kropek przy integracji i wybierz **Opcje systemowe**.
-3. **Wyłącz** opcję "Włącz odpytywanie w poszukiwaniu aktualizacji".
-4. Utwórz nową automatyzację w HA używając poniższego kodu YAML (zmień encję w sekcji akcji na jedną ze swoich encji Librusa):
+Domyślnie integracja odświeża się adaptacyjnie, ale nadal możesz wyłączyć wewnętrzny system i wymusić odpytywanie z własnych automatyzacji HA. Wyłącz "Włącz odpytywanie w poszukiwaniu aktualizacji" w opcjach integracji, a następnie dodaj:
 
 ```yaml
 alias: "Librus - Dynamiczne Odpytywanie"
@@ -513,7 +519,6 @@ action:
     target:
       entity_id: sensor.librus_twoje_dane_ogloszenia
 ```
-Wywołanie odświeżenia jednej encji (np. ogłoszeń) automatycznie zaktualizuje wszystkie pozostałe sensory.
 
 ## 📝 Logi
 
@@ -530,48 +535,35 @@ logger:
 - **Nie udostępniaj swoich danych logowania!**  
 - Dane są przechowywane lokalnie w Home Assistant
 - Komunikacja z Librus odbywa się przez bezpieczne API
-- Hasła są zaszyfrowane w konfiguracji
 
 ## 🐛 Zgłaszanie błędów
-
-Jeśli znajdziesz błąd:
-
-1. Włącz logi debug (patrz wyżej)
-2. Skopiuj logi z błędem
-3. Utwórz issue na GitHub z:
-   - Opisem problemu
-   - Krokami do reprodukcji
-   - Logami (usuń dane osobowe!)
+Jeśli znajdziesz błąd, włącz logi debug, skopiuj logi z błędem i utwórz issue na GitHub.
 
 ## 📄 Licencja
-
 MIT License - patrz [LICENSE](LICENSE)
 
 ## 📝 Historia Zmian
 
-### v2.2.1
-- **Inteligentna fuzja planu lekcji z terminarzem** - Nowy "Algorytm Wagowy" automatycznie dopasowuje sprawdziany (Terminarz) do odpowiednich przedmiotów w planie lekcji, zapobiegając błędnemu przypisywaniu (np. jeden sprawdzian na trzech przedmiotach tego samego dnia).
-- **Zabezpieczenie przed błędem SQLite 16KB w Home Assistant** - Optymalizacja objętości danych JSON (np. inteligentne ucinanie opisu po 100 znakach), chroniąca bazę Recordera przed przepełnieniem.
-- **Wyodrębnienie pól Nauczyciel i Sala** - Nowe atrybuty `nauczyciel` oraz `sala` w encjach lekcji ułatwiające niestandardowe budowanie kart.
-- **Poprawa parsowania przedmiotów z myślnikami** - Ochrona nazwisk nauczycieli przed ucięciem przy długich nazwach przedmiotów (np. zajęcia praktyczno-techniczne).
+### v3.0 (Najnowsza)
+- 🤖 Integracja AI (Profile dla rodzica i ucznia).
+- 🧠 Adaptacyjny Cache zapobiegający problemom z 500 Internal Server Error od Librusa w godzinach porannych.
+- 🚨 Czujnik Uwag o Zachowaniu.
+- 📬 Nowa usługa `get_message` i pełna kontrola przeczytanych wiadomości.
+- ⚡ Szybkie zdarzenia (Events) dla powiadomień bez skomplikowanych template'ów w HA.
 
-### 🙏 Podziękowania
-
-Specjalne podziękowania dla **KB** za wsparcie i pomoc w rozwoju projektu.  
-Ogromne podziękowania dla **@km4lin** za cenną kontrybucję i naprawę błędu blokującego integrację dla kont bez dziennika ocen!
-Dziękuję również dla **@Yauhenda** za dodanie wsparcia dla zajęć dodatkowych (DZD) w planie lekcji!
-Wielkie podziękowania dla **@jarecki** za wsparcie kodu w Pull Request #9, co pozwoliło poprawić działanie bibliotek.
-Dzięki dla **@sgurgul** za celne zgłoszenia (Issue #12, #13, #14) i cenne sugestie optymalizacyjne, które weszły w skład wersji 2.2.1!
-Ogromne podziękowania dla **@ebabaj** za nieoceniony wkład w rozwój integracji i naprawę zajęć ZŚK (PR #20)!
-Wielkie dzięki również dla **@Lucaspog** za świetny pomysł i przygotowanie podwalin pod komentarze do ocen (PR #21)!
-Szczególne podziękowania dla **@morbiasz** za wdrożenie procentowego wskaźnika frekwencji i dodanie nowych kart ze zrealizowanymi lekcjami (PR #27)!
+### v2.2.8 (i wcześniejsze poprawki 2.2.x)
+- **Inteligentna fuzja planu lekcji z terminarzem** - Algorytm automatycznie dopasowuje sprawdziany w planie lekcji.
+- **Zabezpieczenie przed błędem SQLite 16KB w Home Assistant**.
+- **Wyodrębnienie pól Nauczyciel i Sala** ułatwiające niestandardowe budowanie kart.
+- **Poprawa parsowania przedmiotów z myślnikami** oraz liczne mniejsze poprawki optymalizacyjne.
 
 ## 👨‍💻 Autorzy i podziękowania
 
-Ten projekt to tzw. *fork* (niezależna, rozwinięta gałąź) oryginalnej integracji, której twórcą jest **[LukMaverick](https://github.com/LukMaverick/LibrusSynergiaHA)**. 
-Pragnę gorąco podziękować pierwotnemu autorowi za stworzenie solidnego fundamentu integracji, na którym mogłem oprzeć i udostępnić społeczności moje nowości (takie jak natywne kalendarze lekcji, lista zadań domowych, przycisk odświeżania czy statystyki frekwencji).
+Ten projekt to niezależna gałąź oryginalnej integracji, której twórcą jest **[LukMaverick](https://github.com/LukMaverick/LibrusSynergiaHA)**. Pragnę gorąco podziękować pierwotnemu autorowi za stworzenie solidnego fundamentu integracji!
 
-Projekt w warstwie komunikacyjnej korzysta z biblioteki [librus-apix](https://github.com/RustySnek/librus-apix) autorstwa RustySnek.
+Projekt w warstwie komunikacyjnej korzysta z biblioteki [librus-apix](https://github.com/RustySnek/librus-apix) autorstwa RustySnek. Wersja 3.0 przygotowana przez społeczność HA!
+
+Specjalne podziękowania dla **KB**, **@km4lin**, **@Yauhenda**, **@jarecki**, **@sgurgul**, **@ebabaj**, **@Lucaspog** oraz **@morbiasz** za gigantyczny wkład w rozwój, zrzuty kodu, poprawki oraz świetne pomysły, bez których ta integracja by dzisiaj nie istniała!
 
 ---
 
