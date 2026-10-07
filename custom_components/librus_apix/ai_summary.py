@@ -23,6 +23,10 @@ async def async_generate_summary(hass: HomeAssistant, entry_id: str, coordinator
             oceny.append(f"{subject}: " + ", ".join([f"{g['ocena']} ({g.get('kategoria','')})" for g in nowe_oceny]))
             
     frekwencja = coordinator_data.get("frekwencja_stat", {})
+    rodzaje_frekwencji = frekwencja.get("rodzaje", {})
+    # Filtrujemy 'Obecność', by AI nie myliło tego z nieobecnościami
+    nieobecnosci = {k: v for k, v in rodzaje_frekwencji.items() if k.lower() != "obecność"}
+    
     zadania = coordinator_data.get("zadania", [])[:5]  # Najblizsze 5 zadan
     
     prompt = f"""
@@ -33,7 +37,7 @@ Nowe oceny w tym tygodniu:
 {chr(10).join(oceny) if oceny else "Brak nowych ocen"}
 
 Frekwencja (bieżący semestr): {frekwencja.get("procent_semestr", "Brak danych")}%
-Nieobecności/Spóźnienia (ilość): {json.dumps(frekwencja.get("rodzaje", {}))}
+Zarejestrowane problemy z frekwencją (ilość): {json.dumps(nieobecnosci) if nieobecnosci else "Brak spóźnień i nieobecności"}
 
 Najbliższe zadania/sprawdziany:
 {chr(10).join([f"- {z.get('przedmiot')}: {z.get('kategoria')} (termin: {z.get('termin')})" for z in zadania]) if zadania else "Brak nadchodzących sprawdzianów"}
