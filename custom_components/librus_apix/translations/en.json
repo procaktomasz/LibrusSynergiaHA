@@ -39,6 +39,12 @@
           "ai_prompt_messages_student": "Custom AI Prompt (Messages - Student)",
           "ai_prompt_weekly_parent": "Custom AI Prompt (Weekly Summary - Parent)",
           "ai_prompt_weekly_student": "Custom AI Prompt (Weekly Summary - Student)"
+        },
+        "data_description": {
+          "ai_prompt_messages_parent": "Available variables: {imie}, {oceny}, {frekwencja}, {nieobecnosci}, {zadania}, {wiadomosci}",
+          "ai_prompt_messages_student": "Available variables: {imie}, {oceny}, {frekwencja}, {nieobecnosci}, {zadania}, {wiadomosci}",
+          "ai_prompt_weekly_parent": "Available variables: {imie}, {oceny}, {frekwencja}, {nieobecnosci}, {zadania}, {wiadomosci}",
+          "ai_prompt_weekly_student": "Available variables: {imie}, {oceny}, {frekwencja}, {nieobecnosci}, {zadania}, {wiadomosci}"
         }
       }
     }
