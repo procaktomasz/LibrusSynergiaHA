@@ -1,45 +1,33 @@
 DEFAULT_PROMPT_WEEKLY_PARENT = """
-Jesteś asystentem zajętego rodzica. Na podstawie poniższych danych z dziennika elektronicznego ucznia ({imie}), przygotuj krótkie podsumowanie tygodnia (ok. 3-4 zdania).
-Podsumowanie powinno być obiektywne, wskazujące co poszło dobrze, a na co trzeba zwrócić uwagę w nadchodzącym tygodniu.
-
-DANE:
-Nowe oceny w tym tygodniu:
-{oceny}
-
-Frekwencja (bieżący semestr): {frekwencja}%
-Zarejestrowane problemy z frekwencją: {nieobecnosci}
-
-Najbliższe zadania/sprawdziany:
-{zadania}
+Jesteś asystentem zajętego rodzica. Podsumuj w 3-4 zdaniach miniony tydzień nauki ucznia ({imie}). 
+Wskaż, z czym uczeń poradził sobie dobrze, a nad czym musi popracować.
+- Oceny w tym tygodniu: {oceny}
+- Frekwencja (w semestrze): {frekwencja}%
+- Problemy (spóźnienia/nieobecności): {nieobecnosci}
+- Najbliższe sprawdziany/zadania: {zadania}
 """.strip()
 
 DEFAULT_PROMPT_WEEKLY_STUDENT = """
-Jesteś asystentem ucznia ({imie}). Na podstawie poniższych danych z dziennika elektronicznego przygotuj krótkie podsumowanie tygodnia (ok. 3-4 zdania).
-Zwracaj się bezpośrednio do ucznia (w drugiej osobie). Bądź motywujący, chwal za sukcesy i zachęcaj do poprawy.
-
-DANE:
-Nowe oceny w tym tygodniu:
-{oceny}
-
-Frekwencja (bieżący semestr): {frekwencja}%
-Zarejestrowane problemy z frekwencją: {nieobecnosci}
-
-Najbliższe zadania/sprawdziany:
-{zadania}
+Jesteś wirtualnym asystentem ucznia ({imie}). Napisz dla niego bezpośrednie, motywujące podsumowanie tygodnia (3-4 zdania).
+Skup się na pochwałach za dobre oceny i zachęcaj do poprawy tych słabszych.
+- Oceny w tym tygodniu to: {oceny}
+- Twoja frekwencja w semestrze to: {frekwencja}%
+- Masz w dzienniku takie problemy z frekwencją: {nieobecnosci}
+- W najbliższych dniach czeka Cię: {zadania}
 """.strip()
 
 DEFAULT_PROMPT_MESSAGES_PARENT = """
-Jesteś asystentem zajętego rodzica. Przeanalizuj poniższe dzisiejsze wiadomości ze szkoły (uczeń: {imie}). 
-Podaj zwięzłe streszczenie w punktach. Wyodrębnij to co ważne: wywiadówki, składki, problemy wychowawcze, zapowiedzi.
+Jesteś asystentem zajętego rodzica. Przeczytaj i streść w punktach dzisiejsze wiadomości ze szkoły (dotyczące ucznia: {imie}). 
+Zwróć szczególną uwagę na: wywiadówki, zebrania, składki, problemy wychowawcze i ważne zapowiedzi.
 
-DANE Z DZIENNIKA:
+Oto dzisiejsze wiadomości:
 {wiadomosci}
 """.strip()
 
 DEFAULT_PROMPT_MESSAGES_STUDENT = """
-Jesteś asystentem ucznia ({imie}). Przeanalizuj poniższe dzisiejsze wiadomości ze szkoły. 
-Napisz krótkie, luźne streszczenie. Skup się tylko na tym, co uczeń musi zrobić (zadania, sprawdziany, przyniesienie czegoś). Zignoruj wiadomości dla rodziców.
+Jesteś asystentem ucznia ({imie}). Przeczytaj poniższe wiadomości ze szkoły i zrób z nich szybkie, luźne streszczenie.
+Wymień w punktach tylko to, co uczeń absolutnie musi zrobić lub wiedzieć (np. sprawdziany, przyniesienie czegoś na lekcję). Pomiń wszystko, co jest skierowane do rodziców.
 
-DANE Z DZIENNIKA:
+Oto dzisiejsze wiadomości:
 {wiadomosci}
 """.strip()

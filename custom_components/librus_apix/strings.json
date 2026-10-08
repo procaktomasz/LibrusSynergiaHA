@@ -26,9 +26,19 @@
         "data": {
           "fetch_messages_count": "Number of messages to fetch from Librus (max 25)",
           "fetch_messages_content": "Fetch full message content (Marks them as read in Librus!)",
+          "days_before_exam_study": "How many days before the exam to remind about studying? (0 = disabled)"
+        }
+      },
+      "ai": {
+        "title": "Artificial Intelligence (AI) Settings",
+        "description": "Configure AI summaries and custom prompts.",
+        "data": {
           "ai_summary_enabled": "Enable Weekly AI Summary",
           "ai_agent_id": "AI Assistant Service ID (e.g. conversation.openai)",
-          "days_before_exam_study": "How many days before the exam to remind about studying? (0 = disabled)"
+          "ai_prompt_messages_parent": "Custom AI Prompt (Messages - Parent)",
+          "ai_prompt_messages_student": "Custom AI Prompt (Messages - Student)",
+          "ai_prompt_weekly_parent": "Custom AI Prompt (Weekly Summary - Parent)",
+          "ai_prompt_weekly_student": "Custom AI Prompt (Weekly Summary - Student)"
         }
       }
     }
