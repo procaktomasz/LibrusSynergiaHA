@@ -72,12 +72,14 @@ class LibrusGenerateAISummaryButton(CoordinatorEntity, ButtonEntity):
         from .ai_summary import async_generate_summary
         
         agent_id = self._config_entry.options.get("ai_agent_id", "conversation.home_assistant")
-        await async_generate_summary(
-            self.hass, 
-            self._config_entry.entry_id, 
-            self.coordinator.data,
-            agent_id,
-            self._config_entry.options
+        self.hass.async_create_task(
+            async_generate_summary(
+                self.hass, 
+                self._config_entry.entry_id, 
+                self.coordinator.data,
+                agent_id,
+                self._config_entry.options
+            )
         )
 
 class LibrusGenerateAIMessagesSummaryButton(CoordinatorEntity, ButtonEntity):
@@ -101,11 +103,13 @@ class LibrusGenerateAIMessagesSummaryButton(CoordinatorEntity, ButtonEntity):
         from .ai_summary import async_generate_messages_summary
         
         agent_id = self._config_entry.options.get("ai_agent_id", "conversation.home_assistant")
-        await async_generate_messages_summary(
-            self.hass, 
-            self._config_entry.entry_id, 
-            self.coordinator.data,
-            agent_id,
-            self._config_entry.options
+        self.hass.async_create_task(
+            async_generate_messages_summary(
+                self.hass, 
+                self._config_entry.entry_id, 
+                self.coordinator.data,
+                agent_id,
+                self._config_entry.options
+            )
         )
 
