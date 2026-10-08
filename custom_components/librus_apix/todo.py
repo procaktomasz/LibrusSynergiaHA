@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, date
 from typing import Any, Dict, List
 
-from homeassistant.components.todo import TodoListEntity, TodoItem, TodoItemStatus
+from homeassistant.components.todo import TodoListEntity, TodoItem, TodoItemStatus, TodoListEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -118,6 +118,11 @@ class LibrusStudyTodoList(CoordinatorEntity, TodoListEntity):
     @property
     def device_info(self) -> Dict[str, Any]:
         return _device_info(self.coordinator, self._config_entry)
+
+    @property
+    def supported_features(self) -> TodoListEntityFeature:
+        """Flagi obslugiwanych operacji."""
+        return TodoListEntityFeature.UPDATE_TODO_ITEM
 
     @property
     def todo_items(self) -> List[TodoItem] | None:
