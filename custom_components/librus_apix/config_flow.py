@@ -118,6 +118,18 @@ class LibrusApixOptionsFlowHandler(config_entries.OptionsFlow):
                     "days_before_exam_study",
                     default=self.entry.options.get("days_before_exam_study", 2),
                 ): vol.All(vol.Coerce(int), vol.Range(min=0, max=7)),
+                vol.Optional(
+                    "ai_prompt_messages_parent",
+                    default=self.entry.options.get("ai_prompt_messages_parent", ""),
+                ): selector.TextSelector(selector.TextSelectorConfig(multiline=True)),
+                vol.Optional(
+                    "ai_prompt_messages_student",
+                    default=self.entry.options.get("ai_prompt_messages_student", ""),
+                ): selector.TextSelector(selector.TextSelectorConfig(multiline=True)),
+                vol.Optional(
+                    "ai_prompt_weekly",
+                    default=self.entry.options.get("ai_prompt_weekly", ""),
+                ): selector.TextSelector(selector.TextSelectorConfig(multiline=True)),
             }
         )
 

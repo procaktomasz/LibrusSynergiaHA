@@ -28,7 +28,10 @@
           "fetch_messages_content": "Pobieraj pełną treść wiadomości (Oznacza je jako przeczytane w systemie Librus!)",
           "ai_summary_enabled": "Włącz Tygodniowe Podsumowanie AI (Generuje cotygodniowy raport ocen i frekwencji)",
           "ai_agent_id": "ID usługi asystenta AI (np. conversation.openai, conversation.home_assistant)",
-          "days_before_exam_study": "Ile dni przed sprawdzianem przypominać o nauce? (0 = wyłączone)"
+          "days_before_exam_study": "Ile dni przed sprawdzianem przypominać o nauce? (0 = wyłączone)",
+          "ai_prompt_messages_parent": "Niestandardowy Prompt AI (Wiadomości - Rodzic) - Opcjonalne",
+          "ai_prompt_messages_student": "Niestandardowy Prompt AI (Wiadomości - Uczeń) - Opcjonalne",
+          "ai_prompt_weekly": "Niestandardowy Prompt AI (Podsumowanie Tygodnia) - Opcjonalne"
         }
       }
     }

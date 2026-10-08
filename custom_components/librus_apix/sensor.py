@@ -178,6 +178,8 @@ async def async_setup_entry(
     if config_entry.options.get("ai_summary_enabled", False):
         entities.append(LibrusAISummarySensor(config_entry, "rodzic"))
         entities.append(LibrusAISummarySensor(config_entry, "uczen"))
+        entities.append(LibrusAIMessagesSummarySensor(config_entry, "rodzic"))
+        entities.append(LibrusAIMessagesSummarySensor(config_entry, "uczen"))
 
     async_add_entities(entities)
 
@@ -1244,6 +1246,62 @@ class LibrusAISummarySensor(RestoreEntity, SensorEntity):
         text = summaries.get(self._target, "Brak danych")
         
         # Ograniczenie native_value do 255 znaków
+        short_text = text if len(text) <= 250 else text[:247] + "..."
+        
+        self._attr_native_value = short_text
+        self._attr_extra_state_attributes["pełny_tekst"] = text
+        self.async_write_ha_state()
+
+
+class LibrusAIMessagesSummarySensor(RestoreSensor):
+    """Czujnik przechowujący podsumowanie wiadomości z AI."""
+
+    def __init__(self, config_entry: ConfigEntry, target: str) -> None:
+        """Inicjalizacja."""
+        self._config_entry = config_entry
+        self._target = target
+        self._attr_has_entity_name = False
+        self._attr_name = f"Podsumowanie Wiadomości AI ({'Rodzic' if target == 'rodzic' else 'Uczeń'})"
+        self._attr_unique_id = f"{config_entry.entry_id}_ai_messages_summary_{target}"
+        self._attr_icon = "mdi:message-text"
+        self._attr_native_value = "Oczekuje na wygenerowanie..."
+        self._attr_extra_state_attributes = {"pełny_tekst": "Oczekuje na wygenerowanie..."}
+        self._unsub_dispatcher = None
+
+    @property
+    def device_info(self) -> Dict[str, Any]:
+        """Aby urządzenie pokazywało się pod integracją."""
+        return {
+            "identifiers": {(DOMAIN, self._config_entry.entry_id)},
+            "name": "Librus",
+            "manufacturer": "Librus",
+            "model": "Synergia",
+        }
+
+    async def async_added_to_hass(self) -> None:
+        """Kiedy encja jest dodana do HA."""
+        await super().async_added_to_hass()
+        
+        last_state = await self.async_get_last_state()
+        if last_state:
+            self._attr_native_value = last_state.state
+            if "pełny_tekst" in last_state.attributes:
+                self._attr_extra_state_attributes["pełny_tekst"] = last_state.attributes["pełny_tekst"]
+        
+        signal = f"librus_ai_messages_summary_{self._config_entry.entry_id}"
+        self._unsub_dispatcher = async_dispatcher_connect(
+            self.hass, signal, self._handle_summary_update
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Kiedy encja jest usuwana."""
+        if self._unsub_dispatcher:
+            self._unsub_dispatcher()
+
+    @callback
+    def _handle_summary_update(self, summaries: dict) -> None:
+        """Aktualizacja stanu na podstawie wygenerowanych danych z AI."""
+        text = summaries.get(self._target, "Brak danych")
         short_text = text if len(text) <= 250 else text[:247] + "..."
         
         self._attr_native_value = short_text

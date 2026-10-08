@@ -27,7 +27,11 @@
           "fetch_messages_count": "Number of messages to fetch from Librus (higher number slows down startup, recommended ~10, max 25)",
           "fetch_messages_content": "Fetch full message content (Marks them as read in Librus system!)",
           "ai_summary_enabled": "Enable Weekly AI Summary (Generates weekly report for grades and attendance)",
-          "ai_agent_id": "AI Assistant Service ID (e.g. conversation.openai)"
+          "ai_agent_id": "AI Assistant Service ID (e.g. conversation.openai)",
+          "days_before_exam_study": "How many days before exam to remind about studying? (0 = disabled)",
+          "ai_prompt_messages_parent": "Custom AI Prompt (Messages - Parent) - Optional",
+          "ai_prompt_messages_student": "Custom AI Prompt (Messages - Student) - Optional",
+          "ai_prompt_weekly": "Custom AI Prompt (Weekly Summary) - Optional"
         }
       }
     }

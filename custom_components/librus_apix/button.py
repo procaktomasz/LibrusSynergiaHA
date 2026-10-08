@@ -26,6 +26,7 @@ async def async_setup_entry(
     
     if config_entry.options.get("ai_summary_enabled", False):
         buttons.append(LibrusGenerateAISummaryButton(coordinator, config_entry))
+        buttons.append(LibrusGenerateAIMessagesSummaryButton(coordinator, config_entry))
         
     async_add_entities(buttons)
 
@@ -75,5 +76,36 @@ class LibrusGenerateAISummaryButton(CoordinatorEntity, ButtonEntity):
             self.hass, 
             self._config_entry.entry_id, 
             self.coordinator.data,
-            agent_id
+            agent_id,
+            self._config_entry.options
         )
+
+class LibrusGenerateAIMessagesSummaryButton(CoordinatorEntity, ButtonEntity):
+    """Przycisk do ręcznego generowania podsumowania wiadomości AI."""
+
+    def __init__(self, coordinator, config_entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        self._attr_has_entity_name = False
+        self._attr_name = "Generuj podsumowanie wiadomości AI"
+        self._attr_icon = "mdi:message-text-outline"
+        self._attr_unique_id = f"{config_entry.entry_id}_generate_ai_messages_summary"
+
+    @property
+    def device_info(self) -> Dict[str, Any]:
+        return _device_info(self.coordinator, self._config_entry)
+
+    async def async_press(self) -> None:
+        """Uruchom wyliczanie podsumowania wiadomości AI."""
+        _LOGGER.info("Uruchamianie generowania podsumowania wiadomości AI...")
+        from .ai_summary import async_generate_messages_summary
+        
+        agent_id = self._config_entry.options.get("ai_agent_id", "conversation.home_assistant")
+        await async_generate_messages_summary(
+            self.hass, 
+            self._config_entry.entry_id, 
+            self.coordinator.data,
+            agent_id,
+            self._config_entry.options
+        )
+
