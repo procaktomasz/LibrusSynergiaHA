@@ -31,7 +31,7 @@
       },
       "ai": {
         "title": "Artificial Intelligence (AI) Settings",
-        "description": "Configure AI summaries and custom prompts.\nAvailable tags that will be replaced with actual data:\n`{imie}`, `{oceny}`, `{frekwencja}`, `{nieobecnosci}`, `{zadania}`, `{wiadomosci}`.",
+        "description": "Configure AI summaries and custom prompts.",
         "data": {
           "ai_summary_enabled": "Enable AI Assistant module (Summaries of grades, attendance and messages)",
           "ai_agent_id": "AI Assistant Service ID (e.g. conversation.openai)",
@@ -41,10 +41,10 @@
           "ai_prompt_weekly_student": "Custom AI Prompt (Weekly Summary - Student)"
         },
         "data_description": {
-          "ai_prompt_messages_parent": "Available variables: {imie}, {oceny}, {frekwencja}, {nieobecnosci}, {zadania}, {wiadomosci}",
-          "ai_prompt_messages_student": "Available variables: {imie}, {oceny}, {frekwencja}, {nieobecnosci}, {zadania}, {wiadomosci}",
-          "ai_prompt_weekly_parent": "Available variables: {imie}, {oceny}, {frekwencja}, {nieobecnosci}, {zadania}, {wiadomosci}",
-          "ai_prompt_weekly_student": "Available variables: {imie}, {oceny}, {frekwencja}, {nieobecnosci}, {zadania}, {wiadomosci}"
+          "ai_prompt_messages_parent": "Available variables (use curly braces): imie, oceny, frekwencja, nieobecnosci, zadania, wiadomosci",
+          "ai_prompt_messages_student": "Available variables (use curly braces): imie, oceny, frekwencja, nieobecnosci, zadania, wiadomosci",
+          "ai_prompt_weekly_parent": "Available variables (use curly braces): imie, oceny, frekwencja, nieobecnosci, zadania, wiadomosci",
+          "ai_prompt_weekly_student": "Available variables (use curly braces): imie, oceny, frekwencja, nieobecnosci, zadania, wiadomosci"
         }
       }
     }

@@ -31,7 +31,7 @@
       },
       "ai": {
         "title": "Ustawienia Sztucznej Inteligencji (AI)",
-        "description": "Skonfiguruj opcje podsumowań AI i niestandardowe prompty.\nDostępne zmienne, które zostaną podmienione na prawdziwe dane z dziennika:\n`{imie}`, `{oceny}`, `{frekwencja}`, `{nieobecnosci}`, `{zadania}`, `{wiadomosci}`.",
+        "description": "Skonfiguruj opcje podsumowań AI i niestandardowe prompty.",
         "data": {
           "ai_summary_enabled": "Włącz moduł Asystenta AI (Podsumowania ocen, frekwencji oraz wiadomości)",
           "ai_agent_id": "ID usługi asystenta AI (np. conversation.openai, conversation.home_assistant)",
@@ -41,10 +41,10 @@
           "ai_prompt_weekly_student": "Niestandardowy Prompt AI (Podsumowanie Tygodnia - Uczeń)"
         },
         "data_description": {
-          "ai_prompt_messages_parent": "Dostępne zmienne: {imie}, {oceny}, {frekwencja}, {nieobecnosci}, {zadania}, {wiadomosci}",
-          "ai_prompt_messages_student": "Dostępne zmienne: {imie}, {oceny}, {frekwencja}, {nieobecnosci}, {zadania}, {wiadomosci}",
-          "ai_prompt_weekly_parent": "Dostępne zmienne: {imie}, {oceny}, {frekwencja}, {nieobecnosci}, {zadania}, {wiadomosci}",
-          "ai_prompt_weekly_student": "Dostępne zmienne: {imie}, {oceny}, {frekwencja}, {nieobecnosci}, {zadania}, {wiadomosci}"
+          "ai_prompt_messages_parent": "Dostępne zmienne (użyj w nawiasach klamrowych): imie, oceny, frekwencja, nieobecnosci, zadania, wiadomosci",
+          "ai_prompt_messages_student": "Dostępne zmienne (użyj w nawiasach klamrowych): imie, oceny, frekwencja, nieobecnosci, zadania, wiadomosci",
+          "ai_prompt_weekly_parent": "Dostępne zmienne (użyj w nawiasach klamrowych): imie, oceny, frekwencja, nieobecnosci, zadania, wiadomosci",
+          "ai_prompt_weekly_student": "Dostępne zmienne (użyj w nawiasach klamrowych): imie, oceny, frekwencja, nieobecnosci, zadania, wiadomosci"
         }
       }
     }
