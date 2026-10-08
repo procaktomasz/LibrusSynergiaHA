@@ -1253,7 +1253,7 @@ class LibrusAISummarySensor(RestoreEntity, SensorEntity):
         self.async_write_ha_state()
 
 
-class LibrusAIMessagesSummarySensor(RestoreSensor):
+class LibrusAIMessagesSummarySensor(RestoreEntity, SensorEntity):
     """Czujnik przechowujący podsumowanie wiadomości z AI."""
 
     def __init__(self, config_entry: ConfigEntry, target: str) -> None:
