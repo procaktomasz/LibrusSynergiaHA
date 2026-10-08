@@ -284,7 +284,7 @@ if __name__ == "__main__":
     
     while True:
         try:
-            liczba_str = input("\\nIlu uczniów chcesz dodać do panelu? (np. 1, 2): ").strip()
+            liczba_str = input("\nIlu uczniów chcesz dodać do panelu? (np. 1, 2): ").strip()
             liczba = int(liczba_str)
             if liczba > 0:
                 break
@@ -293,12 +293,14 @@ if __name__ == "__main__":
             print("To nie jest prawidłowa liczba.")
             
     for i in range(liczba):
-        print(f"\\n--- Uczeń {i+1} ---")
+        print(f"\n--- Uczeń {i+1} ---")
         imie_nazwisko = input('Podaj pełne Imię i Nazwisko (dokładnie jak w encjach HA, np. "Jan Kowalski"): ').strip()
-        krotka_nazwa = input('Podaj krótkie Imię (do wyświetlania w nagłówkach, np. "Jan"): ').strip()
         
-        plec = input('Płeć (c - chłopiec, d - dziewczynka) [Domyślnie: c]: ').strip().lower()
-        ikona = "mdi:face-woman" if plec == "d" else "mdi:face-man"
+        # Automatyczne generowanie krótkiego imienia (pierwsze słowo)
+        krotka_nazwa = imie_nazwisko.split()[0] if imie_nazwisko else "Uczeń"
+        
+        # Automatyczne rozpoznawanie płci na podstawie polskiego imienia (końcówka 'a')
+        ikona = "mdi:face-woman" if krotka_nazwa.endswith('a') and krotka_nazwa.lower() not in ['kuba', 'barnaba', 'jarema'] else "mdi:face-man"
         
         uczniowie_lista.append((imie_nazwisko, krotka_nazwa, ikona))
 
@@ -314,13 +316,13 @@ if __name__ == "__main__":
     import os
     with open(nazwa_pliku, 'w', encoding='utf-8') as f:
         json.dump(panel, f, ensure_ascii=False, indent=2)
-        f.write("\\n")
+        f.write("\n")
         
-    print("\\n" + "="*50)
+    print("\n" + "="*50)
     print(f"✅ Sukces! Wygenerowano kod do pliku: {nazwa_pliku}")
     print("Otwórz ten plik, skopiuj całą jego zawartość")
     print("i wklej do edytora kodu źródłowego na czystym panelu w HA.")
-    print("="*50 + "\\n")
+    print("="*50 + "\n")
     
     input("Naciśnij klawisz Enter, aby zakończyć...")
 
