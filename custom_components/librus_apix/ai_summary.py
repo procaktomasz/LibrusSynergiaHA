@@ -4,6 +4,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.components import conversation
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
+from .ai_prompts import (
+    DEFAULT_PROMPT_WEEKLY_PARENT,
+    DEFAULT_PROMPT_WEEKLY_STUDENT,
+    DEFAULT_PROMPT_MESSAGES_PARENT,
+    DEFAULT_PROMPT_MESSAGES_STUDENT,
+)
+
 _LOGGER = logging.getLogger(__name__)
 
 async def async_generate_summary(hass: HomeAssistant, entry_id: str, coordinator_data: dict, agent_id: str, options: dict = None):
@@ -30,23 +37,24 @@ async def async_generate_summary(hass: HomeAssistant, entry_id: str, coordinator
     
     zadania = coordinator_data.get("zadania", [])[:5]  # Najblizsze 5 zadan
     
-    default_prompt = f"""
-Na podstawie poniższych danych z dziennika elektronicznego ucznia ({imie}), przygotuj dwa oddzielne, krótkie podsumowania tygodnia (każde po około 3-4 zdania).
+    oceny_str = chr(10).join(oceny) if oceny else "Brak nowych ocen"
+    frekwencja_str = str(frekwencja.get("procent_semestr", "Brak danych"))
+    nieobecnosci_str = json.dumps(nieobecnosci) if nieobecnosci else "Brak spóźnień i nieobecności"
+    zadania_str = chr(10).join([f"- {z.get('przedmiot')}: {z.get('kategoria')} (termin: {z.get('termin')})" for z in zadania]) if zadania else "Brak nadchodzących sprawdzianów"
 
-DANE:
-Nowe oceny w tym tygodniu:
-{chr(10).join(oceny) if oceny else "Brak nowych ocen"}
+    prompt_parent = options.get("ai_prompt_weekly_parent", DEFAULT_PROMPT_WEEKLY_PARENT)
+    prompt_parent = prompt_parent.replace("{imie}", imie).replace("{oceny}", oceny_str).replace("{frekwencja}", frekwencja_str).replace("{nieobecnosci}", nieobecnosci_str).replace("{zadania}", zadania_str)
+    
+    prompt_student = options.get("ai_prompt_weekly_student", DEFAULT_PROMPT_WEEKLY_STUDENT)
+    prompt_student = prompt_student.replace("{imie}", imie).replace("{oceny}", oceny_str).replace("{frekwencja}", frekwencja_str).replace("{nieobecnosci}", nieobecnosci_str).replace("{zadania}", zadania_str)
 
-Frekwencja (bieżący semestr): {frekwencja.get("procent_semestr", "Brak danych")}%
-Zarejestrowane problemy z frekwencją (ilość): {json.dumps(nieobecnosci) if nieobecnosci else "Brak spóźnień i nieobecności"}
-
-Najbliższe zadania/sprawdziany:
-{chr(10).join([f"- {z.get('przedmiot')}: {z.get('kategoria')} (termin: {z.get('termin')})" for z in zadania]) if zadania else "Brak nadchodzących sprawdzianów"}
+    prompt = f"""
+Wykonaj podsumowanie tygodnia.
 
 INSTRUKCJA ZWROTU:
 Zwróć odpowiedź w formacie JSON (bez znaczników markdown typu ```json), zawierającym dwa klucze:
-1. "rodzic" - podsumowanie skierowane do rodzica (obiektywne, wskazujące co poszło dobrze, a na co trzeba zwrócić uwagę w nadchodzącym tygodniu).
-2. "uczen" - podsumowanie skierowane bezpośrednio do ucznia ({imie}) (w drugiej osobie, motywujące, chwalące za sukcesy i zachęcające do poprawy).
+1. "rodzic" - na podstawie instrukcji: {prompt_parent}
+2. "uczen" - na podstawie instrukcji: {prompt_student}
 
 Format odpowiedzi:
 {{
@@ -54,14 +62,6 @@ Format odpowiedzi:
   "uczen": "Twój tekst dla ucznia..."
 }}
 """
-
-    prompt = options.get("ai_prompt_weekly")
-    if prompt:
-        prompt = prompt.replace("{imie}", imie).replace("{oceny}", chr(10).join(oceny) if oceny else "Brak nowych ocen").replace("{frekwencja}", str(frekwencja.get("procent_semestr", "Brak danych"))).replace("{zadania}", chr(10).join([f"- {z.get('przedmiot')}: {z.get('kategoria')} (termin: {z.get('termin')})" for z in zadania]) if zadania else "Brak nadchodzących sprawdzianów")
-    else:
-        prompt = default_prompt
-
-
     _LOGGER.debug("Wysyłanie zapytania do AI (%s)...", agent_id)
     try:
         service_data = {"text": prompt}
@@ -154,33 +154,11 @@ async def async_generate_messages_summary(hass: HomeAssistant, entry_id: str, co
     dane_tekst += "\n\nPRZECZYTANE:\n"
     dane_tekst += "\n---\n".join(przeczytane) if przeczytane else "Brak"
 
-    default_prompt_parent = f"""
-Jesteś asystentem zajętego rodzica. Przeanalizuj poniższe dzisiejsze wiadomości ze szkoły (uczeń: {imie}). 
-Podaj zwięzłe streszczenie w punktach. Wyodrębnij to co ważne: wywiadówki, składki, problemy wychowawcze, zapowiedzi.
-
-DANE Z DZIENNIKA:
-{dane_tekst}
-"""
-
-    default_prompt_student = f"""
-Jesteś asystentem ucznia ({imie}). Przeanalizuj poniższe dzisiejsze wiadomości ze szkoły. 
-Napisz krótkie, luźne streszczenie. Skup się tylko na tym, co uczeń musi zrobić (zadania, sprawdziany, przyniesienie czegoś). Zignoruj wiadomości dla rodziców.
-
-DANE Z DZIENNIKA:
-{dane_tekst}
-"""
-
-    prompt_parent = options.get("ai_prompt_messages_parent")
-    if prompt_parent:
-        prompt_parent = prompt_parent.replace("{imie}", imie).replace("{wiadomosci}", dane_tekst)
-    else:
-        prompt_parent = default_prompt_parent
+    prompt_parent = options.get("ai_prompt_messages_parent", DEFAULT_PROMPT_MESSAGES_PARENT)
+    prompt_parent = prompt_parent.replace("{imie}", imie).replace("{wiadomosci}", dane_tekst)
         
-    prompt_student = options.get("ai_prompt_messages_student")
-    if prompt_student:
-        prompt_student = prompt_student.replace("{imie}", imie).replace("{wiadomosci}", dane_tekst)
-    else:
-        prompt_student = default_prompt_student
+    prompt_student = options.get("ai_prompt_messages_student", DEFAULT_PROMPT_MESSAGES_STUDENT)
+    prompt_student = prompt_student.replace("{imie}", imie).replace("{wiadomosci}", dane_tekst)
 
     # Złożony prompt do modelu
     prompt = f"""

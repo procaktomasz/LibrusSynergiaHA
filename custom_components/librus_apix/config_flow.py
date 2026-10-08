@@ -12,6 +12,12 @@ from homeassistant.helpers import selector
 from librus_apix.client import new_client
 
 from .const import DOMAIN
+from .ai_prompts import (
+    DEFAULT_PROMPT_WEEKLY_PARENT,
+    DEFAULT_PROMPT_WEEKLY_STUDENT,
+    DEFAULT_PROMPT_MESSAGES_PARENT,
+    DEFAULT_PROMPT_MESSAGES_STUDENT,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -120,15 +126,19 @@ class LibrusApixOptionsFlowHandler(config_entries.OptionsFlow):
                 ): vol.All(vol.Coerce(int), vol.Range(min=0, max=7)),
                 vol.Optional(
                     "ai_prompt_messages_parent",
-                    default=self.entry.options.get("ai_prompt_messages_parent", ""),
+                    default=self.entry.options.get("ai_prompt_messages_parent", DEFAULT_PROMPT_MESSAGES_PARENT),
                 ): selector.TextSelector(selector.TextSelectorConfig(multiline=True)),
                 vol.Optional(
                     "ai_prompt_messages_student",
-                    default=self.entry.options.get("ai_prompt_messages_student", ""),
+                    default=self.entry.options.get("ai_prompt_messages_student", DEFAULT_PROMPT_MESSAGES_STUDENT),
                 ): selector.TextSelector(selector.TextSelectorConfig(multiline=True)),
                 vol.Optional(
-                    "ai_prompt_weekly",
-                    default=self.entry.options.get("ai_prompt_weekly", ""),
+                    "ai_prompt_weekly_parent",
+                    default=self.entry.options.get("ai_prompt_weekly_parent", DEFAULT_PROMPT_WEEKLY_PARENT),
+                ): selector.TextSelector(selector.TextSelectorConfig(multiline=True)),
+                vol.Optional(
+                    "ai_prompt_weekly_student",
+                    default=self.entry.options.get("ai_prompt_weekly_student", DEFAULT_PROMPT_WEEKLY_STUDENT),
                 ): selector.TextSelector(selector.TextSelectorConfig(multiline=True)),
             }
         )
