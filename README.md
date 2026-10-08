@@ -664,6 +664,7 @@ mode: single
 trigger:
   - platform: time_pattern
     hours: "/1"
+    minutes: "0"
 condition:
   - condition: time
     after: "08:00:00"
