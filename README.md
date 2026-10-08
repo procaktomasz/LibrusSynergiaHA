@@ -107,9 +107,8 @@ trigger:
   - platform: state
     entity_id: sensor.librus_twoje_imie_wiadomosci
 condition:
-  - condition: numeric_state
-    entity_id: sensor.librus_twoje_imie_wiadomosci
-    above: 0
+  - condition: template
+    value_template: "{{ trigger.to_state.state | int > trigger.from_state.state | int }}"
 action:
   - service: button.press
     target:
