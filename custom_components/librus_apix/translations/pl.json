@@ -31,7 +31,7 @@
       },
       "ai": {
         "title": "Ustawienia Sztucznej Inteligencji (AI)",
-        "description": "Skonfiguruj opcje podsumowań AI i niestandardowe prompty.",
+        "description": "Skonfiguruj opcje podsumowań AI i niestandardowe prompty.\nDostępne zmienne, które zostaną podmienione na prawdziwe dane z dziennika:\n`{imie}`, `{oceny}`, `{frekwencja}`, `{nieobecnosci}`, `{zadania}`, `{wiadomosci}`.",
         "data": {
           "ai_summary_enabled": "Włącz Tygodniowe Podsumowanie AI (Generuje cotygodniowy raport ocen i frekwencji)",
           "ai_agent_id": "ID usługi asystenta AI (np. conversation.openai, conversation.home_assistant)",
