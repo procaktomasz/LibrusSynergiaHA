@@ -33,7 +33,7 @@
         "title": "Artificial Intelligence (AI) Settings",
         "description": "Configure AI summaries and custom prompts.\nAvailable tags that will be replaced with actual data:\n`{imie}`, `{oceny}`, `{frekwencja}`, `{nieobecnosci}`, `{zadania}`, `{wiadomosci}`.",
         "data": {
-          "ai_summary_enabled": "Enable Weekly AI Summary (Generates weekly report for grades and attendance)",
+          "ai_summary_enabled": "Enable AI Assistant module (Summaries of grades, attendance and messages)",
           "ai_agent_id": "AI Assistant Service ID (e.g. conversation.openai)",
           "ai_prompt_messages_parent": "Custom AI Prompt (Messages - Parent)",
           "ai_prompt_messages_student": "Custom AI Prompt (Messages - Student)",
