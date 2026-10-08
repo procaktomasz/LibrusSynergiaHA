@@ -617,6 +617,17 @@ action:
       entity_id: sensor.librus_twoje_dane_ogloszenia
 ```
 
+## 🤖 Niestandardowe Prompty AI
+
+Integracja pozwala na zdefiniowanie własnych instrukcji (promptów) dla asystenta sztucznej inteligencji. Tworząc własny prompt, możesz użyć następujących zmiennych (tagów), które zostaną automatycznie podmienione na prawdziwe dane pobrane z Twojego dziennika Librus:
+
+* `{imie}` - Imię ucznia
+* `{oceny}` - Tekstowa lista nowych ocen z mijającego tygodnia
+* `{frekwencja}` - Wartość liczbowa (np. 85.5) oznaczająca procent frekwencji w obecnym semestrze
+* `{nieobecnosci}` - Słownik/lista podsumowująca ilość spóźnień, nieobecności i zwolnień
+* `{zadania}` - Nadchodzące zadania, sprawdziany i kartkówki
+* `{wiadomosci}` - Zlepiona w całość treść wiadomości ze skrzynki w Librusie
+
 ## 📝 Logi
 
 Aby włączyć szczegółowe logi, dodaj do `configuration.yaml`:
@@ -641,32 +652,27 @@ MIT License - patrz [LICENSE](LICENSE)
 
 ## 📝 Historia Zmian
 
-### v3.0 (Najnowsza)
-- 🤖 Integracja AI (Profile dla rodzica i ucznia).
-- 🧠 Adaptacyjny Cache zapobiegający problemom z 500 Internal Server Error od Librusa w godzinach porannych.
-- 🎮 Lista wyzwań i nauki (To-Do) wspierająca gamifikację dla uczniów oraz czujnik binarny "Nauka Odrobiona".
-- 🚨 Czujnik Uwag o Zachowaniu.
-- 📬 Nowa usługa `get_message` i pełna kontrola przeczytanych wiadomości.
-- ⚡ Szybkie zdarzenia (Events) dla powiadomień bez skomplikowanych template'ów w HA.
+### v3.0.0 (Najnowsza - dev)
+- 🤖 **Moduł Asystenta AI**: Automatyczne generowanie personalizowanych podsumowań tygodnia i dziennych wiadomości (z profilami dla rodzica i ucznia).
+- 🧠 **Adaptacyjny Cache**: Zapobiega problemom z `500 Internal Server Error` od Librusa w godzinach porannych.
+- 🎮 **Lista Wyzwań i Nauki (To-Do)**: Wspiera gamifikację. Dodano również ukryty czujnik binarny "Nauka Odrobiona".
+- 🚨 **Czujnik Uwag**: Śledzi punktację i uwagi o zachowaniu.
+- 📬 **Wiadomości**: Nowa usługa `get_message` i pełna kontrola odczytywanych wiadomości ze skrzynki.
+- ⚡ **Zdarzenia (Events)**: Szybki system powiadomień bez skomplikowanych szablonów.
+
+### v2.3.1 (Hotfix)
+- 🐛 **Poprawka stabilności**: Usunięcie przestarzałego `aiohttp` z `manifest.json` (zapobiega to wywalaniu się walidacji HASSfest).
+- 🐛 **Zgodność z nowym HA**: Naprawa błędu `RestoreSensor is not defined` pojawiającego się podczas uruchamiania integracji.
+
 ### v2.3.0
-Ogromne podziękowania dla społeczności (w szczególności dla **@morbiasz**) za pomoc w rozwoju integracji! Ta wersja wprowadza długo wyczekiwane poprawki oraz nowe funkcje:
-- **Nowość: Oceny Punktowe (0-100)** - Integracja radzi sobie wreszcie z poprawnym odczytywaniem i wyświetlaniem ocen wyrażonych w punktach/procentach (Rozwiązuje Issue #22).
-- **Nowość: Sensor Uwag** - Dodano nowy sensor zbierający uwagi ucznia (POZ, NEG, NEU).
-- **Nowość: Gotowy Dashboard** - W folderze `examples` udostępniono gotowe rozwiązanie panelu "Szkoła" do skopiowania na pulpit HA.
-- **Naprawa Wiadomości:** Zlikwidowano sztywny limit 5 wiadomości. Od teraz sensor poprawnie wczytuje ilość zadeklarowaną przez użytkownika w konfiguracji (nawet do 25 wiadomości) oraz rozwiązano problem duplikujących się elementów na małych skrzynkach (Rozwiązuje Issue #28).
-- **Inne:** Poprawki w architekturze testów środowiskowych.
+*Ogromne podziękowania dla społeczności (w szczególności dla **@morbiasz**) za pomoc w rozwoju integracji! Ta wersja wprowadza długo wyczekiwane poprawki:*
+- **Oceny Punktowe (0-100)**: Integracja radzi sobie wreszcie z poprawnym odczytywaniem i wyświetlaniem ocen w punktach/procentach (Rozwiązuje Issue #22).
+- **Sensor Uwag**: Nowy sensor zbierający uwagi ucznia (POZ, NEG, NEU).
+- **Gotowy Dashboard**: Udostępniono gotowe rozwiązanie panelu "Szkoła" do skopiowania na pulpit HA (folder `examples`).
+- **Naprawa Wiadomości**: Zlikwidowano sztywny limit wiadomości - integracja pobiera zdefiniowaną w opcjach ilość (Rozwiązuje Issue #28).
 
-### v2.2.1
-- **Inteligentna fuzja planu lekcji z terminarzem** - Nowy "Algorytm Wagowy" automatycznie dopasowuje sprawdziany (Terminarz) do odpowiednich przedmiotów w planie lekcji, zapobiegając błędnemu przypisywaniu (np. jeden sprawdzian na trzech przedmiotach tego samego dnia).
-- **Zabezpieczenie przed błędem SQLite 16KB w Home Assistant** - Optymalizacja objętości danych JSON (np. inteligentne ucinanie opisu po 100 znakach), chroniąca bazę Recordera przed przepełnieniem.
-- **Wyodrębnienie pól Nauczyciel i Sala** - Nowe atrybuty `nauczyciel` oraz `sala` w encjach lekcji ułatwiające niestandardowe budowanie kart.
-- **Poprawa parsowania przedmiotów z myślnikami** - Ochrona nazwisk nauczycieli przed ucięciem przy długich nazwach przedmiotów (np. zajęcia praktyczno-techniczne).
-
-### v2.2.8 (i wcześniejsze poprawki 2.2.x)
-- **Inteligentna fuzja planu lekcji z terminarzem** - Algorytm automatycznie dopasowuje sprawdziany w planie lekcji.
-- **Zabezpieczenie przed błędem SQLite 16KB w Home Assistant**.
-- **Wyodrębnienie pól Nauczyciel i Sala** ułatwiające niestandardowe budowanie kart.
-- **Poprawa parsowania przedmiotów z myślnikami** oraz liczne mniejsze poprawki optymalizacyjne.
+---
+*Pełna historia starszych zmian (v2.2.x i wstecz) znajduje się w zakładce [Releases na naszym GitHubie](https://github.com/procaktomasz/LibrusSynergiaHA/releases).*
 
 ## 👨‍💻 Autorzy i podziękowania
 
