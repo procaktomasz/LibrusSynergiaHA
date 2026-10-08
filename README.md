@@ -26,7 +26,7 @@ Integracja tworzy następujące sensory:
 |--------|------|---------|
 | `sensor.librus_uczen` | Informacje o uczniu (klasa, wychowawca, szkoła) | imię i nazwisko |
 | `sensor.librus_szczesliwy_numerek` | Szczęśliwy numerek dnia | numer |
-| `sensor.librus_oceny` | Wszystkie oceny bieżącego semestru | liczba ocen |
+| `sensor.librus_oceny` | Wszystkie oceny bieżącego semestru; przy ocenach tekstowych/symbolicznych (np. `T`, `np`) pole `opis` zawiera ich treść z Librusa, np. "45%" | liczba ocen |
 | `sensor.librus_srednia_ocen` | **Globalna średnia** ze wszystkich przedmiotów | float (wykres 📈) |
 | `sensor.librus_wiadomosci` | Ostatnie wiadomości (domyślnie 10, konfigurowalne) | liczba nieprzeczytanych |
 | `sensor.librus_uwagi` | (NOWOŚĆ) Uwagi o zachowaniu z podziałem na typy | liczba uwag |
@@ -35,6 +35,10 @@ Integracja tworzy następujące sensory:
 | `sensor.librus_plan_lekcji` | Plan lekcji na pełne 7 dni z rozbiciem na dni tygodnia | - |
 | `sensor.librus_frekwencja` | Lista nieobecności i spóźnień, rozbicie oraz **frekwencja w %** | liczba nieobecności |
 | `sensor.librus_tematy_lekcji` | **Tematy zrealizowanych lekcji** z ostatnich 7 dni | liczba lekcji dzisiaj |
+| `sensor.librus_frekwencja` | Lista nieobecności i spóźnień, rozbicie na usprawiedliwione / nieusprawiedliwione / zwolnienia oraz **frekwencja w %** (semestr i rok) | liczba nieobecności |
+| `sensor.librus_tematy_lekcji` | **Tematy zrealizowanych lekcji** z ostatnich 7 dni wraz z wpisem frekwencji przy każdej lekcji (np. `nb` tylko na 1. lekcji) i zastępcą, jeśli lekcja była zastępstwem | liczba lekcji dzisiaj |
+| `sensor.librus_terminarz` | Nadchodzące wpisy terminarza (bieżący i następny miesiąc); każdy ma pole `rodzaj`: `sprawdzian`, `kartkowka`, `wydarzenie`, `zastepstwo`, `przesuniecie`, `odwolanie`, `nieobecnosc_nauczyciela`, `dzien_wolny` | liczba wpisów |
+| `sensor.librus_uwagi` | **Uwagi** (pozytywne, negatywne, neutralne) z treścią, kategorią, datą i nauczycielem | liczba uwag |
 | `sensor.librus_ogloszenia` | Najnowsze ogłoszenia | liczba ogłoszeń |
 | `sensor.librus_ai_summary_rodzic` | (NOWOŚĆ) Inteligentny raport dla rodzica | Pełny tekst raportu |
 | `sensor.librus_ai_summary_uczen` | (NOWOŚĆ) Inteligentny raport motywujący dla ucznia | Pełny tekst raportu |
@@ -113,6 +117,11 @@ recorder:
       - sensor.librus_*_tematy_lekcji
       - sensor.librus_*_frekwencja
 ```
+=======
+## 🧩 Gotowy panel
+
+Nie chcesz składać kart samodzielnie? W katalogu [`examples/dashboard`](examples/dashboard) jest gotowy panel „Szkoła” (strona główna + podwidok każdego ucznia) do wklejenia w edytorze kodu źródłowego panelu, oraz generator dla dowolnej liczby uczniów.
+>>>>>>> main
 
 ## 📊 Przykładowe karty Lovelace
 
@@ -463,7 +472,40 @@ severity:
 
 ## 🔔 Zdarzenia (Events) i Powiadomienia na telefon
 
+<<<<<<< HEAD
 Integracja od wersji 3.0 wysyła automatyczne zdarzenia (Events), kiedy wykryje nowości (bez generowania duplikatów).
+Integracja wysyła zdarzenia Home Assistant gdy pojawi się nowa wiadomość, ocena lub wpis nieobecności/spóźnienia.
+Integracja wysyła zdarzenia Home Assistant gdy pojawi się nowa wiadomość, ocena lub uwaga.
+Zdarzenia są wykrywane przy każdym odświeżeniu (co 2h). Pierwsze uruchomienie tylko zapamiętuje stan — **nie wysyła duplikatów**.
+
+> **Test bez czekania:** Idź do **Developer Tools → Events**, Event type: `librus_apix_nowa_wiadomosc`, Event data jak poniżej i kliknij **Fire Event**.
+
+### 📬 Powiadomienie o nowej wiadomości
+
+Zdarzenie: `librus_apix_nowa_wiadomosc`  
+Dostępne dane: `uczen` (Imię i Nazwisko z profilu), `nadawca`, `temat`, `data`, `ma_zalacznik`
+
+> **Uwaga:** Treść wiadomości nie jest pobierana celowo — aby nie oznaczać wiadomości jako przeczytanych w Librusie.
+
+```yaml
+automation:
+  - alias: "Librus - nowa wiadomosc"
+    trigger:
+      - platform: event
+        event_type: librus_apix_nowa_wiadomosc
+    action:
+      - service: notify.mobile_app_NAZWA_TWOJEGO_TELEFONU
+        data:
+          title: "📬 Librus: nowa wiadomość"
+          message: >-
+            Dotyczy: {{ trigger.event.data.uczen | default('Dziecko') }}
+            {% set msg = state_attr('sensor.librus_IMIE_NAZWISKO_wiadomosci', 'wiadomosci')
+               | selectattr('nieprzeczytana', 'equalto', true) | list | first | default({}) %}
+            Od: {{ msg.nadawca | default('nieznany') }}
+            Temat: {{ msg.temat | default('brak') }}
+```
+
+> **Uwaga:** Powyższa wiadomość korzysta z globalnego parametru `uczen`, dzięki czemu od razu wiadomo, którego profilu dotyczy powiadomienie. Zamień w kodzie `sensor.librus_IMIE_NAZWISKO_wiadomosci` na nazwę swojego sensora, jeśli chcesz pobrać więcej szczegółów z atrybutów.
 
 ### 📝 Powiadomienie o nowej ocenie
 Zdarzenie: `librus_apix_nowa_ocena`  
@@ -489,6 +531,48 @@ automation:
 ### 📬 Powiadomienie o nowej wiadomości
 Zdarzenie: `librus_apix_nowa_wiadomosc`  
 Dostępne dane: `uczen`, `nadawca`, `temat`, `data`, `ma_zalacznik`
+### 🚸 Powiadomienie o nieobecności lub spóźnieniu
+
+Zdarzenie: `librus_apix_nowa_nieobecnosc`  
+Dostępne dane: `uczen`, `data`, `dzien_tygodnia`, `numer` (lekcji), `przedmiot`, `nauczyciel`, `rodzaj` (np. `nb`, `sp`, `u`, `zw`), `opis` (np. "nieobecność")
+
+Źródło: wpis frekwencji przy każdej zrealizowanej lekcji z ostatnich 7 dni (`sensor.librus_tematy_lekcji`). Obecność (`ob`) i wycieczka (`wy`) nie wysyłają zdarzeń. Zmiana wpisu, np. `nb` → `u` po usprawiedliwieniu, to nowe zdarzenie.
+
+```yaml
+automation:
+  - alias: "Librus - nieobecność lub spóźnienie"
+    trigger:
+      platform: event
+      event_type: librus_apix_nowa_nieobecnosc
+    action:
+      - service: notify.mobile_app_NAZWA_TWOJEGO_TELEFONU
+        data:
+          title: "🚸 {{ trigger.event.data.uczen }}: {{ trigger.event.data.opis or trigger.event.data.rodzaj }}"
+          message: >-
+            {{ trigger.event.data.dzien_tygodnia }} {{ trigger.event.data.data }},
+            lekcja {{ trigger.event.data.numer }}: {{ trigger.event.data.przedmiot }}
+### ⚠️ Powiadomienie o nowej uwadze
+
+Zdarzenie: `librus_apix_nowa_uwaga`  
+Dostępne dane: `uczen`, `data`, `rodzaj` (`pozytywna` / `negatywna` / `neutralna`), `kategoria`, `nauczyciel`, `tresc`
+
+```yaml
+automation:
+  - alias: "Librus - nowa uwaga"
+    trigger:
+      platform: event
+      event_type: librus_apix_nowa_uwaga
+    action:
+      - service: notify.mobile_app_NAZWA_TWOJEGO_TELEFONU
+        data:
+          title: >-
+            {{ {'pozytywna': '👍', 'negatywna': '⚠️'}.get(trigger.event.data.rodzaj, 'ℹ️') }}
+            {{ trigger.event.data.uczen }} - uwaga {{ trigger.event.data.rodzaj }}
+          message: "{{ trigger.event.data.tresc }} ({{ trigger.event.data.nauczyciel }})"
+```
+
+> **Gdzie znaleźć nazwę telefonu?** HA → Settings → Devices & Services → Mobile App → nazwa urządzenia (np. `notify.mobile_app_samsung_galaxy_s24`)
+
 
 ```yaml
 automation:
@@ -564,6 +648,19 @@ MIT License - patrz [LICENSE](LICENSE)
 - 🚨 Czujnik Uwag o Zachowaniu.
 - 📬 Nowa usługa `get_message` i pełna kontrola przeczytanych wiadomości.
 - ⚡ Szybkie zdarzenia (Events) dla powiadomień bez skomplikowanych template'ów w HA.
+### v2.3.0
+Ogromne podziękowania dla społeczności (w szczególności dla **@morbiasz**) za pomoc w rozwoju integracji! Ta wersja wprowadza długo wyczekiwane poprawki oraz nowe funkcje:
+- **Nowość: Oceny Punktowe (0-100)** - Integracja radzi sobie wreszcie z poprawnym odczytywaniem i wyświetlaniem ocen wyrażonych w punktach/procentach (Rozwiązuje Issue #22).
+- **Nowość: Sensor Uwag** - Dodano nowy sensor zbierający uwagi ucznia (POZ, NEG, NEU).
+- **Nowość: Gotowy Dashboard** - W folderze `examples` udostępniono gotowe rozwiązanie panelu "Szkoła" do skopiowania na pulpit HA.
+- **Naprawa Wiadomości:** Zlikwidowano sztywny limit 5 wiadomości. Od teraz sensor poprawnie wczytuje ilość zadeklarowaną przez użytkownika w konfiguracji (nawet do 25 wiadomości) oraz rozwiązano problem duplikujących się elementów na małych skrzynkach (Rozwiązuje Issue #28).
+- **Inne:** Poprawki w architekturze testów środowiskowych.
+
+### v2.2.1
+- **Inteligentna fuzja planu lekcji z terminarzem** - Nowy "Algorytm Wagowy" automatycznie dopasowuje sprawdziany (Terminarz) do odpowiednich przedmiotów w planie lekcji, zapobiegając błędnemu przypisywaniu (np. jeden sprawdzian na trzech przedmiotach tego samego dnia).
+- **Zabezpieczenie przed błędem SQLite 16KB w Home Assistant** - Optymalizacja objętości danych JSON (np. inteligentne ucinanie opisu po 100 znakach), chroniąca bazę Recordera przed przepełnieniem.
+- **Wyodrębnienie pól Nauczyciel i Sala** - Nowe atrybuty `nauczyciel` oraz `sala` w encjach lekcji ułatwiające niestandardowe budowanie kart.
+- **Poprawa parsowania przedmiotów z myślnikami** - Ochrona nazwisk nauczycieli przed ucięciem przy długich nazwach przedmiotów (np. zajęcia praktyczno-techniczne).
 
 ### v2.2.8 (i wcześniejsze poprawki 2.2.x)
 - **Inteligentna fuzja planu lekcji z terminarzem** - Algorytm automatycznie dopasowuje sprawdziany w planie lekcji.

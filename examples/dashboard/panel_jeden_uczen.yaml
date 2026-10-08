@@ -1,0 +1,374 @@
+# Panel Librus dla jednego ucznia. Zamień wszystkie 'jan_kowalski' i 'jan-kowalski'
+# na swojego ucznia (np. 'anna_nowak' / 'anna-nowak'), a 'Jan' na imię.
+# JSON jest poprawnym YAML-em - wklej całość w edytorze kodu źródłowego panelu.
+{
+  "title": "Szkoła",
+  "views": [
+    {
+      "type": "sections",
+      "max_columns": 3,
+      "title": "Szkoła",
+      "path": "szkola",
+      "icon": "mdi:school",
+      "header": {
+        "card": {
+          "type": "markdown",
+          "text_only": true,
+          "content": "# 🎒 Szkoła\n{% set d = ['poniedziałek','wtorek','środa','czwartek','piątek','sobota','niedziela'] %}{{ d[now().weekday()] | capitalize }}, {{ now().strftime('%d.%m.%Y') }}"
+        }
+      },
+      "sections": [
+        {
+          "type": "grid",
+          "cards": [
+            {
+              "type": "heading",
+              "heading": "Jan",
+              "heading_style": "title",
+              "icon": "mdi:face-man"
+            },
+            {
+              "type": "custom:mushroom-template-card",
+              "primary": "{{ states('sensor.librus_jan_kowalski_informacje_o_uczniu') }}",
+              "secondary": "kl. {{ state_attr('sensor.librus_jan_kowalski_informacje_o_uczniu','klasa') }} · wych. {{ state_attr('sensor.librus_jan_kowalski_informacje_o_uczniu','wychowawca') }}",
+              "icon": "mdi:account-school",
+              "icon_color": "blue",
+              "color": "blue",
+              "grid_options": {
+                "columns": 12
+              },
+              "tap_action": {
+                "action": "navigate",
+                "navigation_path": "/szkola-librus/librus-jan-kowalski"
+              }
+            },
+            {
+              "type": "custom:mushroom-template-card",
+              "primary": "{{ states('sensor.librus_jan_kowalski_srednia_ocen') }}",
+              "secondary": "Średnia ocen",
+              "icon": "mdi:chart-line",
+              "icon_color": "{% set v = states('sensor.librus_jan_kowalski_srednia_ocen') | float(0) %}{{ 'green' if v >= 4.5 else ('light-green' if v >= 3.75 else ('amber' if v >= 2.75 else ('red' if v > 0 else 'grey'))) }}",
+              "color": "{% set v = states('sensor.librus_jan_kowalski_srednia_ocen') | float(0) %}{{ 'green' if v >= 4.5 else ('light-green' if v >= 3.75 else ('amber' if v >= 2.75 else ('red' if v > 0 else 'grey'))) }}",
+              "grid_options": {
+                "columns": 6
+              },
+              "tap_action": {
+                "action": "navigate",
+                "navigation_path": "/szkola-librus/librus-jan-kowalski"
+              }
+            },
+            {
+              "type": "custom:mushroom-template-card",
+              "primary": "{{ states('sensor.librus_jan_kowalski_szczesliwy_numerek') }}",
+              "secondary": "{{ '🍀 To mój numer!' if states('sensor.librus_jan_kowalski_szczesliwy_numerek') | int(0) == state_attr('sensor.librus_jan_kowalski_informacje_o_uczniu','numer_w_klasie') | int(-1) else 'Szczęśliwy numerek (mój: ' ~ state_attr('sensor.librus_jan_kowalski_informacje_o_uczniu','numer_w_klasie') ~ ')' }}",
+              "icon": "mdi:clover",
+              "icon_color": "{{ 'green' if states('sensor.librus_jan_kowalski_szczesliwy_numerek') | int(0) == state_attr('sensor.librus_jan_kowalski_informacje_o_uczniu','numer_w_klasie') | int(-1) else 'grey' }}",
+              "color": "{{ 'green' if states('sensor.librus_jan_kowalski_szczesliwy_numerek') | int(0) == state_attr('sensor.librus_jan_kowalski_informacje_o_uczniu','numer_w_klasie') | int(-1) else 'grey' }}",
+              "grid_options": {
+                "columns": 6
+              },
+              "tap_action": {
+                "action": "none"
+              }
+            },
+            {
+              "type": "custom:mushroom-template-card",
+              "primary": "{{ state_attr('sensor.librus_jan_kowalski_wiadomosci','liczba_nieprzeczytanych') | int(0) }}",
+              "secondary": "Nieprzeczytane wiadomości",
+              "icon": "mdi:email",
+              "icon_color": "{{ 'red' if state_attr('sensor.librus_jan_kowalski_wiadomosci','liczba_nieprzeczytanych') | int(0) > 0 else 'grey' }}",
+              "color": "{{ 'red' if state_attr('sensor.librus_jan_kowalski_wiadomosci','liczba_nieprzeczytanych') | int(0) > 0 else 'grey' }}",
+              "grid_options": {
+                "columns": 6
+              },
+              "tap_action": {
+                "action": "navigate",
+                "navigation_path": "/szkola-librus/librus-jan-kowalski"
+              }
+            },
+            {
+              "type": "custom:mushroom-template-card",
+              "primary": "{{ states('todo.librus_jan_kowalski_zadania_domowe_to_do') }}",
+              "secondary": "Zadania domowe",
+              "icon": "mdi:notebook-edit",
+              "icon_color": "{{ 'orange' if states('todo.librus_jan_kowalski_zadania_domowe_to_do') | int(0) > 0 else 'grey' }}",
+              "color": "{{ 'orange' if states('todo.librus_jan_kowalski_zadania_domowe_to_do') | int(0) > 0 else 'grey' }}",
+              "grid_options": {
+                "columns": 6
+              },
+              "tap_action": {
+                "action": "more-info",
+                "entity": "todo.librus_jan_kowalski_zadania_domowe_to_do"
+              }
+            },
+            {
+              "type": "custom:mushroom-template-card",
+              "primary": "{{ states('sensor.librus_jan_kowalski_uwagi') }}",
+              "secondary": "Uwagi · 👍 {{ state_attr('sensor.librus_jan_kowalski_uwagi','liczba_pozytywnych') | int(0) }} ⚠️ {{ state_attr('sensor.librus_jan_kowalski_uwagi','liczba_negatywnych') | int(0) }}",
+              "icon": "mdi:account-alert",
+              "icon_color": "{% set u = state_attr('sensor.librus_jan_kowalski_uwagi','uwagi') or [] %}{% set neg = u | selectattr('rodzaj','eq','negatywna') | selectattr('data','ge',(now() - timedelta(days=14)).strftime('%Y-%m-%d')) | list %}{{ 'red' if neg else ('green' if u | selectattr('rodzaj','eq','pozytywna') | list else 'grey') }}",
+              "color": "{% set u = state_attr('sensor.librus_jan_kowalski_uwagi','uwagi') or [] %}{% set neg = u | selectattr('rodzaj','eq','negatywna') | selectattr('data','ge',(now() - timedelta(days=14)).strftime('%Y-%m-%d')) | list %}{{ 'red' if neg else ('green' if u | selectattr('rodzaj','eq','pozytywna') | list else 'grey') }}",
+              "grid_options": {
+                "columns": 6
+              },
+              "tap_action": {
+                "action": "navigate",
+                "navigation_path": "/szkola-librus/librus-jan-kowalski"
+              }
+            },
+            {
+              "type": "custom:mushroom-template-card",
+              "primary": "{{ state_attr('sensor.librus_jan_kowalski_frekwencja','frekwencja_procent') | default('–', true) }}%",
+              "secondary": "Frekwencja · nb: {{ state_attr('sensor.librus_jan_kowalski_frekwencja','liczba_nieusprawiedliwionych') | int(0) }} · sp: {{ state_attr('sensor.librus_jan_kowalski_frekwencja','liczba_spoznien') | int(0) }}",
+              "icon": "mdi:account-check",
+              "icon_color": "{% set v = state_attr('sensor.librus_jan_kowalski_frekwencja','frekwencja_procent') %}{{ 'grey' if v is none else ('green' if v >= 95 else ('amber' if v >= 85 else 'red')) }}",
+              "color": "{% set v = state_attr('sensor.librus_jan_kowalski_frekwencja','frekwencja_procent') %}{{ 'grey' if v is none else ('green' if v >= 95 else ('amber' if v >= 85 else 'red')) }}",
+              "grid_options": {
+                "columns": 6
+              },
+              "tap_action": {
+                "action": "navigate",
+                "navigation_path": "/szkola-librus/librus-jan-kowalski"
+              }
+            },
+            {
+              "type": "heading",
+              "heading": "Plan lekcji",
+              "heading_style": "subtitle",
+              "icon": "mdi:timetable"
+            },
+            {
+              "type": "markdown",
+              "content": "{% set p = 'sensor.librus_jan_kowalski_' %}\n{% set dni = state_attr(p ~ 'plan_lekcji', 'kolejne_7_dni') or [] %}\n{% set today = now().strftime('%Y-%m-%d') %}{% set hm = now().strftime('%H:%M') %}\n{% set ns = namespace(d=none) %}\n{% for d in dni if ns.d is none and d.lekcje | length > 0 %}{% if d.data > today or (d.data == today and hm < (d.lekcje | map(attribute='godzina_do') | select('match', '[0-9]') | list | last | default('00:00'))) %}{% set ns.d = d %}{% endif %}{% endfor %}\n{% if ns.d is none %}Brak lekcji w najbliższych dniach 🎉{% else %}{% set d = ns.d %}\n{% set jutro = (now() + timedelta(days=1)).strftime('%Y-%m-%d') %}\n### {{ 'Dziś' if d.data == today else ('Jutro' if d.data == jutro else d.dzien_tygodnia) }} · {{ d.lekcje[0].godzina_od }}–{{ d.lekcje[-1].godzina_do }}\n| | Godz. | Przedmiot | Sala |\n|---|---|---|---|\n{% for l in d.lekcje %}{% set teraz = d.data == today and l.godzina_od <= hm < l.godzina_do %}{% set ev = (l.get('zdarzenie') or '') | lower %}| {{ '▶' if teraz else (l.numer if l.numer is not none else 0) }} | {{ l.godzina_od }} | {% if l.get('odwolana') %}~~{{ l.przedmiot }}~~ ❌{% elif l.get('zastepstwo') %}**{{ l.przedmiot }}** 🔄{% else %}**{{ l.przedmiot }}**{% endif %}{% if l.get('dzd') %} <small>*dodatkowe*</small>{% endif %}{% if 'sprawdzian' in ev %} 🔴{% elif 'kartk' in ev %} 🟠{% elif ev %} 🔵{% endif %} | {{ (l.get('sala') or '') | replace('s. ','') }} |\n{% endfor %}{% endif %}"
+            },
+            {
+              "type": "heading",
+              "heading": "Najbliższe 14 dni",
+              "heading_style": "subtitle",
+              "icon": "mdi:calendar-alert"
+            },
+            {
+              "type": "markdown",
+              "content": "{% set zd = state_attr('sensor.librus_jan_kowalski_terminarz','zdarzenia') or [] %}\n{% set ns = namespace(n=0) %}\n{% for z in zd | rejectattr('tytul','search','^(Nauczyciel:|Zastępstwo)') | sort(attribute='data') if z.get('rodzaj', '') not in ['nieobecnosc_nauczyciela','zastepstwo','przesuniecie','odwolanie'] %}{% set dd = (strptime(z.data,'%Y-%m-%d').date() - now().date()).days %}{% set t = z.tytul | lower %}{% if 0 <= dd <= 14 %}{% if true %}{% set ns.n = ns.n + 1 %}{% set opis = z.szczegoly.Opis if z.szczegoly is mapping and z.szczegoly.Opis is defined and z.szczegoly.Opis != 'unknown' else '' %}\n{{ {'sprawdzian':'🔴','kartkowka':'🟠','dzien_wolny':'🏖️','wydarzenie':'🔵'}.get(z.get('rodzaj', '')) or ('🔴' if 'sprawdzian' in t or 'klasówka' in t else ('🟠' if 'kartk' in t else ('🔵' if 'wydarzenie' in t else '📅'))) }} **{{ z.tydzien[:3] | lower }} {{ z.data[8:10] }}.{{ z.data[5:7] }}** <small>{{ 'dziś' if dd == 0 else ('jutro' if dd == 1 else 'za ' ~ dd ~ ' dni') }}</small> · **{{ z.przedmiot if z.przedmiot and z.przedmiot != 'unknown' else '' }}** {{ z.tytul }}{% if opis %}<br><small>{{ opis | replace('\\n', ' ') | truncate(120) }}</small>{% endif %}\n{% endif %}{% endif %}{% endfor %}{% if ns.n == 0 %}Nic w ciągu 14 dni ✅{% endif %}"
+            },
+            {
+              "type": "heading",
+              "heading": "Ostatnie oceny",
+              "heading_style": "subtitle",
+              "icon": "mdi:star-circle"
+            },
+            {
+              "type": "markdown",
+              "content": "{% set o = state_attr('sensor.librus_jan_kowalski_oceny','oceny_wg_przedmiotu') or {} %}\n{% set ns = namespace(l=[]) %}\n{% for prz, lst in o.items() %}{% for g in lst %}{% set ns.l = ns.l + [{'p': prz, 'o': g.ocena, 'd': g.data, 'k': g.kategoria, 'n': g.jest_nowa, 'op': g.get('opis', '')}] %}{% endfor %}{% endfor %}\n{% set kol = {'6':'#2e7d32','5':'#43a047','4':'#7cb342','3':'#f9a825','2':'#ef6c00','1':'#c62828'} %}\n{% for g in (ns.l | sort(attribute='d', reverse=true))[:6] %}<font color=\"{{ kol.get(g.o[:1], '#9e9e9e') }}\"><b>{{ g.o }}</b></font> **{{ g.p }}**{% if g.op %} – {{ g.op }}{% endif %} <small>{{ g.k }} · {{ g.d[8:10] }}.{{ g.d[5:7] }}</small>{{ ' 🆕' if g.n }}<br>\n{% else %}Brak ocen w tym semestrze.{% endfor %}"
+            },
+            {
+              "type": "button",
+              "name": "Wszystkie szczegóły",
+              "icon": "mdi:arrow-right-circle",
+              "show_state": false,
+              "tap_action": {
+                "action": "navigate",
+                "navigation_path": "/szkola-librus/librus-jan-kowalski"
+              },
+              "grid_options": {
+                "columns": 12,
+                "rows": 1
+              },
+              "icon_height": "24px"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sections",
+      "max_columns": 3,
+      "title": "Librus · Jan",
+      "path": "librus-jan-kowalski",
+      "icon": "mdi:face-man",
+      "subview": true,
+      "back_path": "/szkola-librus/szkola",
+      "sections": [
+        {
+          "type": "grid",
+          "column_span": 3,
+          "cards": [
+            {
+              "type": "heading",
+              "heading": "Kalendarz",
+              "heading_style": "title",
+              "icon": "mdi:calendar"
+            },
+            {
+              "type": "calendar",
+              "initial_view": "dayGridMonth",
+              "grid_options": {
+                "columns": 36,
+                "rows": 8
+              },
+              "entities": [
+                "calendar.librus_jan_kowalski_terminarz_kalendarz",
+                "calendar.librus_jan_kowalski_plan_lekcji_kalendarz"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "cards": [
+            {
+              "type": "heading",
+              "heading": "Oceny",
+              "heading_style": "title",
+              "icon": "mdi:star-circle"
+            },
+            {
+              "type": "gauge",
+              "entity": "sensor.librus_jan_kowalski_srednia_ocen",
+              "name": "Średnia",
+              "min": 1,
+              "max": 6,
+              "needle": true,
+              "severity": {
+                "red": 1,
+                "yellow": 2.75,
+                "green": 4.5
+              },
+              "grid_options": {
+                "columns": 6,
+                "rows": 3
+              }
+            },
+            {
+              "type": "tile",
+              "entity": "sensor.librus_jan_kowalski_frekwencja",
+              "name": "Nieobecności",
+              "icon": "mdi:account-cancel",
+              "grid_options": {
+                "columns": 6,
+                "rows": 1
+              }
+            },
+            {
+              "type": "markdown",
+              "content": "Frekwencja: **{{ state_attr('sensor.librus_jan_kowalski_frekwencja','frekwencja_procent') | default('–', true) }}%**<br>Spóźnienia: **{{ state_attr('sensor.librus_jan_kowalski_frekwencja','liczba_spoznien') | int(0) }}** · nb: **{{ state_attr('sensor.librus_jan_kowalski_frekwencja','liczba_nieusprawiedliwionych') | int(0) }}** · u: **{{ state_attr('sensor.librus_jan_kowalski_frekwencja','liczba_usprawiedliwionych') | int(0) }}**",
+              "grid_options": {
+                "columns": 6,
+                "rows": 2
+              }
+            },
+            {
+              "type": "markdown",
+              "content": "{% set o = state_attr('sensor.librus_jan_kowalski_oceny','oceny_wg_przedmiotu') or {} %}{% set sr = state_attr('sensor.librus_jan_kowalski_srednia_ocen','srednie_wg_przedmiotow') or {} %}\n{% set kol = {'6':'#2e7d32','5':'#43a047','4':'#7cb342','3':'#f9a825','2':'#ef6c00','1':'#c62828'} %}\n| Przedmiot | Oceny | Średnia |\n|:---|:---|---:|\n{% for prz in o.keys() | sort %}{% set s = sr.get(prz) %}| **{{ prz }}** | {% for g in o[prz] %}<font color=\"{{ kol.get(g.ocena[:1], '#9e9e9e') }}\"><b>{{ g.ocena }}</b></font>{% if g.get('opis') %}<small> ({{ g.opis }})</small>{% endif %}{{ ' ' }}{% endfor %}| {% if s is number %}<font color=\"{{ '#43a047' if s >= 4.5 else ('#7cb342' if s >= 3.75 else ('#f9a825' if s >= 2.75 else '#c62828')) }}\"><b>{{ '%.2f' | format(s) }}</b></font>{% else %}–{% endif %} |\n{% endfor %}"
+            },
+            {
+              "type": "history-graph",
+              "title": "Średnia w czasie",
+              "hours_to_show": 720,
+              "entities": [
+                {
+                  "entity": "sensor.librus_jan_kowalski_srednia_ocen",
+                  "name": "Średnia"
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "heading": "Zadania domowe",
+              "heading_style": "title",
+              "icon": "mdi:notebook-edit"
+            },
+            {
+              "type": "todo-list",
+              "entity": "todo.librus_jan_kowalski_zadania_domowe_to_do",
+              "hide_create": true
+            },
+            {
+              "type": "heading",
+              "heading": "Wiadomości",
+              "heading_style": "subtitle",
+              "icon": "mdi:email"
+            },
+            {
+              "type": "markdown",
+              "content": "{% set m = state_attr('sensor.librus_jan_kowalski_wiadomosci','wiadomosci') or [] %}\n{% for x in m if x.temat and x.temat != 'Brak' %}{{ '🔴' if x.nieprzeczytana else '⚪' }} **{{ x.temat | trim }}**{{ ' 📎' if x.ma_zalacznik }}<br><small>{{ x.nadawca.split(' (')[0] }} · {{ x.data[8:10] }}.{{ x.data[5:7] }} {{ x.data[11:16] }}</small>{% if x.tresc %}<details><summary>Treść</summary>{{ x.tresc }}</details>{% endif %}\n\n{% else %}Brak wiadomości.{% endfor %}"
+            },
+            {
+              "type": "heading",
+              "heading": "Ogłoszenia",
+              "heading_style": "subtitle",
+              "icon": "mdi:bullhorn"
+            },
+            {
+              "type": "markdown",
+              "content": "{% for a in state_attr('sensor.librus_jan_kowalski_ogloszenia','lista_ogloszen') or [] %}<details><summary><b>{{ a.tytul }}</b> <small>· {{ a.data[8:10] }}.{{ a.data[5:7] }} · {{ a.nadawca }}</small></summary>\n\n{{ a.opis }}\n</details>\n{% else %}Brak ogłoszeń.{% endfor %}"
+            },
+            {
+              "type": "tile",
+              "entity": "button.librus_jan_kowalski_odswiez_dane",
+              "name": "Odśwież dane z Librusa",
+              "icon": "mdi:refresh",
+              "tap_action": {
+                "action": "perform-action",
+                "perform_action": "button.press",
+                "target": {
+                  "entity_id": "button.librus_jan_kowalski_odswiez_dane"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "cards": [
+            {
+              "type": "heading",
+              "heading": "Uwagi",
+              "heading_style": "title",
+              "icon": "mdi:account-alert"
+            },
+            {
+              "type": "markdown",
+              "content": "{% set u = state_attr('sensor.librus_jan_kowalski_uwagi','uwagi') or [] %}{% set ik = {'pozytywna':'👍','negatywna':'⚠️','neutralna':'ℹ️'} %}\n{% for x in u %}{{ ik.get(x.rodzaj, 'ℹ️') }} **{{ x.data[8:10] }}.{{ x.data[5:7] }}** <small>{{ x.rodzaj }}{{ ' · ' ~ x.nauczyciel if x.nauczyciel }}</small><br>{{ x.tresc }}\n\n{% else %}Brak uwag ✅{% endfor %}"
+            },
+            {
+              "type": "heading",
+              "heading": "Tematy lekcji (7 dni)",
+              "heading_style": "title",
+              "icon": "mdi:book-open-page-variant"
+            },
+            {
+              "type": "markdown",
+              "content": "{% set lekcje = state_attr('sensor.librus_jan_kowalski_tematy_lekcji', 'lekcje') or [] %}\n{% for dzien, lista in lekcje | groupby('data') | reverse %}\n#### {{ lista[0].dzien_tygodnia }} {{ dzien[8:10] }}.{{ dzien[5:7] }}\n{% for l in lista %}`{{ l.numer if l.numer is not none else '–' }}` **{{ l.przedmiot }}**{% if l.zastepstwo %} 🔄 <small>{{ l.zastepca }}</small>{% endif %}{% if l.obecnosc in ['nb', 'u', 'sp', 'zw'] %} ❗**{{ l.obecnosc }}**{% endif %} – {{ l.temat | replace('\\n', ' ') }}<br>\n{% endfor %}\n{% else %}Brak zrealizowanych lekcji w ostatnich 7 dniach.{% endfor %}"
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "cards": [
+            {
+              "type": "heading",
+              "heading": "Sprawdziany i terminarz",
+              "heading_style": "title",
+              "icon": "mdi:calendar-alert"
+            },
+            {
+              "type": "markdown",
+              "content": "{% set zd = state_attr('sensor.librus_jan_kowalski_terminarz','zdarzenia') or [] %}\n{% set ns = namespace(n=0) %}\n{% for z in zd | rejectattr('tytul','search','^(Nauczyciel:|Zastępstwo)') | sort(attribute='data') if z.get('rodzaj', '') not in ['nieobecnosc_nauczyciela','zastepstwo','przesuniecie','odwolanie'] %}{% set dd = (strptime(z.data,'%Y-%m-%d').date() - now().date()).days %}{% set t = z.tytul | lower %}{% if 0 <= dd <= 60 %}{% if true %}{% set ns.n = ns.n + 1 %}{% set opis = z.szczegoly.Opis if z.szczegoly is mapping and z.szczegoly.Opis is defined and z.szczegoly.Opis != 'unknown' else '' %}\n{{ {'sprawdzian':'🔴','kartkowka':'🟠','dzien_wolny':'🏖️','wydarzenie':'🔵'}.get(z.get('rodzaj', '')) or ('🔴' if 'sprawdzian' in t or 'klasówka' in t else ('🟠' if 'kartk' in t else ('🔵' if 'wydarzenie' in t else '📅'))) }} **{{ z.tydzien[:3] | lower }} {{ z.data[8:10] }}.{{ z.data[5:7] }}** <small>{{ 'dziś' if dd == 0 else ('jutro' if dd == 1 else 'za ' ~ dd ~ ' dni') }}</small> · **{{ z.przedmiot if z.przedmiot and z.przedmiot != 'unknown' else '' }}** {{ z.tytul }}{% if opis %}<br><small>{{ opis | replace('\\n', ' ') | truncate(120) }}</small>{% endif %}\n{% endif %}{% endif %}{% endfor %}{% if ns.n == 0 %}Nic w ciągu 60 dni ✅{% endif %}"
+            },
+            {
+              "type": "heading",
+              "heading": "Plan tygodnia",
+              "heading_style": "subtitle",
+              "icon": "mdi:timetable"
+            },
+            {
+              "type": "markdown",
+              "content": "{% set dni = state_attr('sensor.librus_jan_kowalski_plan_lekcji', 'kolejne_7_dni') or [] %}\n{% for d in dni if d.lekcje | length > 0 %}\n#### {{ d.dzien_tygodnia }} {{ d.data[8:10] }}.{{ d.data[5:7] }} <small>· {{ d.lekcje[0].godzina_od }}–{{ d.lekcje[-1].godzina_do }}</small>\n{% for l in d.lekcje %}{% set ev = (l.get('zdarzenie') or '') | lower %}`{{ l.godzina_od }}` {% if l.get('odwolana') %}~~{{ l.przedmiot }}~~ ❌{% elif l.get('zastepstwo') %}**{{ l.przedmiot }}** 🔄{% else %}{{ l.przedmiot }}{% endif %}{% if l.get('dzd') %} <small>*dodatkowe*</small>{% endif %}{% if 'sprawdzian' in ev %} 🔴{% elif 'kartk' in ev %} 🟠{% elif ev %} 🔵{% endif %} <small>{{ (l.get('sala') or '') | replace('s. ','') }}</small><br>\n{% endfor %}\n{% else %}Brak lekcji w najbliższym tygodniu.{% endfor %}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

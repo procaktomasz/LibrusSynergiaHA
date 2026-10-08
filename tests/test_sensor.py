@@ -9,7 +9,8 @@ from custom_components.librus_apix.__init__ import LibrusApiClient
 def mock_client():
     client = MagicMock(spec=LibrusApiClient)
     client.async_authenticate = AsyncMock(return_value=True)
-    client.async_get_student_info = AsyncMock()
+    client.async_get_student_information = AsyncMock()
+    client.options = {}
     client.async_get_grades = AsyncMock()
     client.async_get_messages = AsyncMock(return_value=[])
     client.async_get_homework = AsyncMock(return_value=[])
@@ -19,6 +20,7 @@ def mock_client():
     client.async_get_announcements = AsyncMock(return_value=[])
     client.async_get_completed_lessons = AsyncMock(return_value=[])
     client.async_get_attendance_stats = AsyncMock(return_value=None)
+    client.async_get_notes = AsyncMock(return_value=[])
     return client
 
 @pytest.fixture
@@ -42,7 +44,7 @@ async def test_update_missing_grades(coordinator, mock_client):
     student_info = MagicMock()
     student_info.name = "Jan Kowalski"
     student_info.class_name = "1A"
-    mock_client.async_get_student_info.return_value = student_info
+    mock_client.async_get_student_information.return_value = student_info
     
     # Upewnijmy sie ze koordynator ma puste dane
     coordinator.data = None
@@ -68,7 +70,7 @@ async def test_student_info_getattr_fix(coordinator, mock_client):
             self.class_name = "2B"
     
     student_info = FakeStudentInformation("Piotr Nowak")
-    mock_client.async_get_student_info.return_value = student_info
+    mock_client.async_get_student_information.return_value = student_info
     
     result = await coordinator._async_update_data()
     
