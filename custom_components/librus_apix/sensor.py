@@ -161,9 +161,6 @@ async def async_setup_entry(
     # Czujnik globalnej sredniej
     entities.append(LibrusSredniaOcenSensor(coordinator, config_entry))
 
-    # Uwagi o zachowaniu
-    entities.append(LibrusUwagiSensor(coordinator, config_entry))
-
     # Opcjonalne: Czujniki AI
     if config_entry.options.get("ai_summary_enabled", False):
         entities.append(LibrusAISummarySensor(config_entry, "rodzic"))
@@ -232,7 +229,6 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
             ogloszenia_raw = await self.client.async_get_announcements()
             tematy_raw = await self.client.async_get_completed_lessons()
             frekwencja_stat_raw = await self.client.async_get_attendance_stats()
-            uwagi_raw = await getattr(self.client, "async_get_notices", lambda: None)()
             uwagi_raw = await self.client.async_get_notes()
 
             prev = self.data or {}
@@ -1177,44 +1173,6 @@ class LibrusOgloszeniaSensor(CoordinatorEntity, SensorEntity):
             "lista_ogloszen": ogloszenia,
         }
 
-
-class LibrusUwagiSensor(CoordinatorEntity, SensorEntity):
-    """Czujnik uwag o zachowaniu."""
-
-    def __init__(self, coordinator: LibrusDataUpdateCoordinator, config_entry: ConfigEntry) -> None:
-        super().__init__(coordinator)
-        self._config_entry = config_entry
-        self._attr_has_entity_name = False
-        self._attr_name = "Uwagi o zachowaniu"
-        self._attr_unique_id = f"{config_entry.entry_id}_uwagi"
-        self._attr_icon = "mdi:alert-circle"
-
-    @property
-    def device_info(self) -> Dict[str, Any]:
-        return _device_info(self.coordinator, self._config_entry)
-
-    @property
-    def native_value(self) -> str:
-        data = self.coordinator.data or {}
-        uwagi = data.get("uwagi", [])
-        return str(len(uwagi))
-
-    @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
-        data = self.coordinator.data or {}
-        uwagi = data.get("uwagi", [])
-        
-        pozytywne = [u for u in uwagi if str(u.get("typ")).lower() == "positive"]
-        negatywne = [u for u in uwagi if str(u.get("typ")).lower() == "negative"]
-        neutralne = [u for u in uwagi if str(u.get("typ")).lower() not in ("positive", "negative")]
-
-        return {
-            "lista_uwag": uwagi,
-            "liczba_pozytywnych": len(pozytywne),
-            "liczba_negatywnych": len(negatywne),
-            "liczba_neutralnych": len(neutralne),
-            "najnowsza_uwaga": uwagi[0] if uwagi else None
-        }
 
 
 from homeassistant.helpers.restore_state import RestoreEntity
