@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import DOMAIN
 from .sensor import _device_info
@@ -188,6 +189,7 @@ class LibrusStudyTodoList(CoordinatorEntity, TodoListEntity):
             
         await self._store.async_save({"completed": list(self._completed_uids)})
         self.async_write_ha_state()
+        async_dispatcher_send(self.hass, f"librus_apix_{self._config_entry.entry_id}_study_updated")
 
     async def async_delete_todo_items(self, uids: List[str]) -> None:
         """Usuwanie nie jest wspierane."""
