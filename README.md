@@ -48,7 +48,6 @@ Integracja tworzy następujące sensory:
 | `todo.*_todo_nauka_to_do` | (NOWOŚĆ) Systemowa lista przygotowań do sprawdzianów | przypomnienia |
 | `binary_sensor.*_nauka_odrobiona` | (NOWOŚĆ) Czujnik informujący, czy uczeń odrobił naukę | ON / OFF |
 | `button.*_generuj_podsumowanie_ai` | (NOWOŚĆ) Przycisk generujący raport AI | - |
-| `switch.*_automatyczne_podsumowanie_ai`| (NOWOŚĆ) Przełącznik automatycznego raportowania AI | - |
 
 Sensory średnich mają `state_class: measurement` — HA automatycznie rysuje dla nich wykres historyczny po kliknięciu w encję.
 
