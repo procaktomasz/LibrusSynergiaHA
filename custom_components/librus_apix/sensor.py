@@ -1250,6 +1250,8 @@ class LibrusAISummarySensor(RestoreEntity, SensorEntity):
         
         self._attr_native_value = short_text
         self._attr_extra_state_attributes["pełny_tekst"] = text
+        from datetime import datetime
+        self._attr_extra_state_attributes["ostatnia_aktualizacja"] = datetime.now().isoformat()
         self.async_write_ha_state()
 
 
@@ -1306,5 +1308,7 @@ class LibrusAIMessagesSummarySensor(RestoreEntity, SensorEntity):
         
         self._attr_native_value = short_text
         self._attr_extra_state_attributes["pełny_tekst"] = text
+        from datetime import datetime
+        self._attr_extra_state_attributes["ostatnia_aktualizacja"] = datetime.now().isoformat()
         self.async_write_ha_state()
 
