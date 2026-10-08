@@ -76,6 +76,19 @@ def _srednia_ocen(oceny: List[Dict]) -> Optional[float]:
                 if val > 6 or grade_str.lower().endswith(('%', 'p', 'pkt')):
                     wartosci.append(val)
                     continue
+                    
+            # 1b. Sprawdź format X/Y (np. 85/100)
+            if "/" in grade_str:
+                parts = grade_str.split("/")
+                if len(parts) == 2 and parts[0].strip().isdigit() and parts[1].strip().isdigit():
+                    num = float(parts[0].strip())
+                    den = float(parts[1].strip())
+                    # Jeśli to punkty, możemy po prostu dodać wartość (lub zignorować ze średniej, ale załóżmy dodanie punktów)
+                    if den == 100:
+                        wartosci.append(num)
+                    else:
+                        wartosci.append(num / den * 100)
+                    continue
 
             # 2. Sprawdz czy to ocena literowa (klasy 1-3)
             base_char = grade_str[0].upper()
