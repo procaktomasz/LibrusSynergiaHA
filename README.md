@@ -61,6 +61,70 @@ Integracja dostarcza interaktywne listy zadań (To-Do) połączone z kalendarzem
 🎮 **Wskazówka:** Do dyspozycji masz ukrytą encję `binary_sensor.librus_[uczen]_nauka_odrobiona`. Przyjmuje ona stan `WŁĄCZONY (on)` tylko wtedy, gdy na interaktywnej liście przygotowań do lekcji nie zalegają żadne nieodkliknięte sprawdziany z nadchodzących dni. 
 To najprostsza metoda na stworzenie w Home Assistant warunku blokującego dostęp do sprzętu rozrywkowego!
 
+## 🤖 Asystent AI i Przykładowe Automatyzacje
+
+Wraz z wersją 3.0.0 integracja została wyposażona w potężne funkcje automatycznego podsumowywania ocen, frekwencji oraz wiadomości przez Sztuczną Inteligencję (wymaga podpięcia asystenta AI, np. OpenAI, Google Gemini lub lokalnego modelu do Home Assistanta).
+
+Zamiast ręcznie wymuszać harmonogramy w kodzie integracji, zachęcamy do tworzenia elastycznych automatyzacji. Kiedy zechcesz otrzymać raport (lub gdy przyjdzie nowa wiadomość), wystarczy, że automatyzacja zasymuluje kliknięcie przycisku `Generuj podsumowanie AI`, a gdy tekst będzie gotowy – wyśle go na Twój telefon.
+
+Oto gotowe przykłady do wklejenia w widoku YAML automatyzacji:
+
+### 1. Piątkowy Raport na Telefon (Podsumowanie tygodnia)
+
+```yaml
+alias: "Librus: Piątkowy Raport AI"
+description: "Generuje raport ocen w piątek o 17:00 i wysyła push, gdy będzie gotowy"
+mode: single
+trigger:
+  - platform: time
+    at: "17:00:00"
+condition:
+  - condition: time
+    weekday:
+      - fri
+action:
+  - service: button.press
+    target:
+      entity_id: button.librus_twoje_imie_generuj_podsumowanie_ai
+  - wait_for_trigger:
+      - platform: state
+        entity_id: sensor.librus_twoje_imie_podsumowanie_ai_rodzic
+    timeout: "00:02:00"
+    continue_on_timeout: false
+  - service: notify.mobile_app_twoj_telefon
+    data:
+      title: "🤖 Librus AI - Raport Tygodniowy"
+      message: "{{ states('sensor.librus_twoje_imie_podsumowanie_ai_rodzic') }}"
+```
+
+### 2. Streszczenie Nowych Wiadomości (Reagowanie na bieżąco)
+
+```yaml
+alias: "Librus: Streszczenie Nowych Wiadomości AI"
+description: "Wykrywa nową wiadomość, analizuje ją przez AI i wysyła push na telefon"
+mode: single
+trigger:
+  - platform: state
+    entity_id: sensor.librus_twoje_imie_wiadomosci
+condition:
+  - condition: numeric_state
+    entity_id: sensor.librus_twoje_imie_wiadomosci
+    above: 0
+action:
+  - service: button.press
+    target:
+      entity_id: button.librus_twoje_imie_generuj_podsumowanie_wiadomosci_ai
+  - wait_for_trigger:
+      - platform: state
+        entity_id: sensor.librus_twoje_imie_wiadomosci_ai_rodzic
+    timeout: "00:02:00"
+    continue_on_timeout: false
+  - service: notify.mobile_app_twoj_telefon
+    data:
+      title: "📬 Librus AI - Masz nową wiadomość!"
+      message: "{{ states('sensor.librus_twoje_imie_wiadomosci_ai_rodzic') }}"
+```
+
 ## 📦 Instalacja
 
 ### Opcja 1: HACS (Zalecana)
