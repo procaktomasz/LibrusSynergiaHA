@@ -497,7 +497,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                     "nauczyciel": lekcja.get("zastepca") or lekcja.get("nauczyciel"),
                     "rodzaj": lekcja.get("obecnosc"),
                     "opis": lekcja.get("obecnosc_opis"),
-                }
+                },
             )
 
     def _fire_note_events(self, uwagi: List[Dict], uczen: str) -> None:
