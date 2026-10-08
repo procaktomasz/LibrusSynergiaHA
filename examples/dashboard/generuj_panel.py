@@ -13,11 +13,8 @@ import json
 import sys
 import unicodedata
 
-UCZNIOWIE = [
-    # (imię i nazwisko jak w urządzeniu "Librus - ...", krótka nazwa w panelu, ikona)
-    ("Jan Kowalski", "Jan", "mdi:face-man"),
-    ("Anna Kowalska", "Anna", "mdi:face-woman"),
-]
+# Uczniowie są podawani interaktywnie podczas działania skryptu
+UCZNIOWIE = []
 PANEL = "szkola-librus"  # adres (URL) panelu w HA, np. /szkola-librus
 
 # --- Opcjonalnie: sekcja "Dojazd" (puste = sekcji nie ma) --------------------
@@ -279,7 +276,51 @@ def overview():
 
 
 if __name__ == "__main__":
+    print("="*50)
+    print("🎓 Generator Dashboardu dla Librus Synergia HA 🎓")
+    print("="*50)
+    
+    uczniowie_lista = []
+    
+    while True:
+        try:
+            liczba_str = input("\\nIlu uczniów chcesz dodać do panelu? (np. 1, 2): ").strip()
+            liczba = int(liczba_str)
+            if liczba > 0:
+                break
+            print("Wpisz liczbę większą od zera.")
+        except ValueError:
+            print("To nie jest prawidłowa liczba.")
+            
+    for i in range(liczba):
+        print(f"\\n--- Uczeń {i+1} ---")
+        imie_nazwisko = input('Podaj pełne Imię i Nazwisko (dokładnie jak w encjach HA, np. "Jan Kowalski"): ').strip()
+        krotka_nazwa = input('Podaj krótkie Imię (do wyświetlania w nagłówkach, np. "Jan"): ').strip()
+        
+        plec = input('Płeć (c - chłopiec, d - dziewczynka) [Domyślnie: c]: ').strip().lower()
+        ikona = "mdi:face-woman" if plec == "d" else "mdi:face-man"
+        
+        uczniowie_lista.append((imie_nazwisko, krotka_nazwa, ikona))
+
+    # Zastąp globalną zmienną UCZNIOWIE naszą listą
+    UCZNIOWIE = uczniowie_lista
+    
     panel = {"title": "Szkoła", "views": [overview()] + [kid_subview(prefiks(u), n, i) for u, n, i in UCZNIOWIE]}
-    # JSON jest poprawnym YAML-em - edytor kodu źródłowego HA przyjmie go bez zmian
-    json.dump(panel, sys.stdout, ensure_ascii=False, indent=2)
-    print()
+    
+    # Tworzenie nazwy pliku
+    imiona_plik = "_".join([n for _, n, _ in UCZNIOWIE])
+    nazwa_pliku = f"panel_{imiona_plik}.yaml"
+    
+    import os
+    with open(nazwa_pliku, 'w', encoding='utf-8') as f:
+        json.dump(panel, f, ensure_ascii=False, indent=2)
+        f.write("\\n")
+        
+    print("\\n" + "="*50)
+    print(f"✅ Sukces! Wygenerowano kod do pliku: {nazwa_pliku}")
+    print("Otwórz ten plik, skopiuj całą jego zawartość")
+    print("i wklej do edytora kodu źródłowego na czystym panelu w HA.")
+    print("="*50 + "\\n")
+    
+    input("Naciśnij klawisz Enter, aby zakończyć...")
+
