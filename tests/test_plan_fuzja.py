@@ -21,6 +21,7 @@ def _wpis(tytul, nr, rodzaj):
 
 async def test_bez_sztucznej_lekcji_dla_nieobecnosci_nauczyciela(hass):
     client = MagicMock(spec=LibrusApiClient)
+    client.username = "test_user"
     client.options = {}
     for name in ("async_get_student_information", "async_get_grades", "async_get_messages", "async_get_homework",
                  "async_get_attendance", "async_get_announcements", "async_get_completed_lessons"):

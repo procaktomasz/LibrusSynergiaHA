@@ -8,6 +8,7 @@ from custom_components.librus_apix.__init__ import LibrusApiClient
 @pytest.fixture
 def mock_client():
     client = MagicMock(spec=LibrusApiClient)
+    client.username = "test_user"
     client.async_authenticate = AsyncMock(return_value=True)
     client.async_get_student_information = AsyncMock()
     client.options = {}
