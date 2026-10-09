@@ -129,15 +129,10 @@ async def async_generate_messages_summary(hass: HomeAssistant, entry_id: str, co
     imie = student.name if student else "Uczeń"
     
     wiadomosci = coordinator_data.get("wiadomosci", [])
-    from datetime import date
-    today_str = date.today().strftime("%Y-%m-%d")
-    
-    dzisiejsze_lub_nieprzeczytane = [m for m in wiadomosci if m.get("date", "").startswith(today_str) or m.get("unread", False)]
-    
     nieprzeczytane = []
     przeczytane = []
     
-    for m in dzisiejsze_lub_nieprzeczytane:
+    for m in wiadomosci:
         title = m.get("title", "")
         author = m.get("author", "")
         content = m.get("content", "Brak pobranej treści")
@@ -149,11 +144,11 @@ async def async_generate_messages_summary(hass: HomeAssistant, entry_id: str, co
         else:
             przeczytane.append(info)
             
-    stats = f"Do podsumowania zebrano {len(dzisiejsze_lub_nieprzeczytane)} wiadomości, z czego {len(nieprzeczytane)} jest nieprzeczytanych."
+    stats = f"Do podsumowania zebrano {len(wiadomosci)} wiadomości (cała historia skrzynki), z czego {len(nieprzeczytane)} jest nieprzeczytanych."
     
-    if not dzisiejsze_lub_nieprzeczytane:
-        _LOGGER.info("Brak wiadomości. Pomijam AI.")
-        async_dispatcher_send(hass, f"librus_ai_messages_summary_{entry_id}", {"rodzic": "Brak wiadomości na dziś.", "uczen": "Brak wiadomości na dziś."})
+    if not wiadomosci:
+        _LOGGER.info("Brak wiadomości w skrzynce. Pomijam AI.")
+        async_dispatcher_send(hass, f"librus_ai_messages_summary_{entry_id}", {"rodzic": "Brak wiadomości.", "uczen": "Brak wiadomości."})
         return
         
     dane_tekst = f"STATYSTYKI:\n{stats}\n\nNIEPRZECZYTANE:\n"
