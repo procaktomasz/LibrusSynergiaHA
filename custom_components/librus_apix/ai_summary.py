@@ -92,7 +92,11 @@ Format odpowiedzi:
         if result_text.endswith("```"):
             result_text = result_text.rsplit("```", 1)[0]
             
-        result_json = json.loads(result_text.strip())
+        try:
+            result_json = json.loads(result_text.strip())
+        except json.JSONDecodeError:
+            _LOGGER.warning("AI nie zwróciło poprawnego JSONa. Używam surowego tekstu.")
+            result_json = {"rodzic": result_text.strip(), "uczen": result_text.strip()}
         
         rodzic_text = result_json.get("rodzic", "Brak danych dla rodzica")
         uczen_text = result_json.get("uczen", "Brak danych dla ucznia")
@@ -106,10 +110,13 @@ Format odpowiedzi:
             {"rodzic": rodzic_text, "uczen": uczen_text}
         )
         
-    except json.JSONDecodeError as ex:
-        _LOGGER.error("Nie udało się sparsować odpowiedzi JSON od AI: %s. Odpowiedź: %s", ex, result_text)
     except Exception as ex:
         _LOGGER.error("Błąd podczas generowania podsumowania AI: %s", ex)
+        async_dispatcher_send(
+            hass, 
+            f"librus_ai_summary_{entry_id}", 
+            {"rodzic": f"Błąd AI: {ex}", "uczen": f"Błąd AI: {ex}"}
+        )
 
 async def async_generate_messages_summary(hass: HomeAssistant, entry_id: str, coordinator_data: dict, agent_id: str, options: dict = None):
     """Generate Daily Messages AI Summary."""
@@ -198,7 +205,11 @@ Format odpowiedzi:
         if result_text.endswith("```"):
             result_text = result_text.rsplit("```", 1)[0]
             
-        result_json = json.loads(result_text.strip())
+        try:
+            result_json = json.loads(result_text.strip())
+        except json.JSONDecodeError:
+            _LOGGER.warning("AI nie zwróciło poprawnego JSONa. Używam surowego tekstu.")
+            result_json = {"rodzic": result_text.strip(), "uczen": result_text.strip()}
         
         async_dispatcher_send(
             hass, 
@@ -210,4 +221,12 @@ Format odpowiedzi:
         )
     except Exception as ex:
         _LOGGER.error("Błąd podczas generowania podsumowania wiadomości AI: %s", ex)
+        async_dispatcher_send(
+            hass, 
+            f"librus_ai_messages_summary_{entry_id}", 
+            {
+                "rodzic": f"Wystąpił błąd AI: {ex}", 
+                "uczen": f"Wystąpił błąd AI: {ex}"
+            }
+        )
 
