@@ -104,17 +104,20 @@ class LibrusStudyTodoList(CoordinatorEntity, TodoListEntity):
         self._attr_name = "Przygotowanie do lekcji (To-Do)"
         self._attr_unique_id = f"{config_entry.entry_id}_todo_nauka_to_do"
         self._attr_icon = "mdi:book-open-variant"
-        
-        from homeassistant.helpers.storage import Store
-        self._store = Store(coordinator.hass, 1, f"librus_apix_{config_entry.entry_id}_study")
-        self._completed_uids = set()
+
+    @property
+    def _completed_uids(self) -> set:
+        return getattr(self.coordinator, "study_completed_uids", set())
+
+    @_completed_uids.setter
+    def _completed_uids(self, value: set) -> None:
+        self.coordinator.study_completed_uids = value
 
     async def async_added_to_hass(self) -> None:
         """Kiedy encja zostaje dodana do HA."""
         await super().async_added_to_hass()
-        data = await self._store.async_load()
-        if data:
-            self._completed_uids = set(data.get("completed", []))
+        if hasattr(self.coordinator, "async_init_study_store"):
+            await self.coordinator.async_init_study_store(self._config_entry.entry_id)
 
     @property
     def device_info(self) -> Dict[str, Any]:
@@ -182,12 +185,17 @@ class LibrusStudyTodoList(CoordinatorEntity, TodoListEntity):
 
     async def async_update_todo_item(self, item: TodoItem) -> None:
         """Zapisuje lokalnie ze uczen odhaczyl ze sie uczył."""
+        if not hasattr(self.coordinator, "study_completed_uids"):
+            self.coordinator.study_completed_uids = set()
+
         if item.status == TodoItemStatus.COMPLETED:
-            self._completed_uids.add(item.uid)
+            self.coordinator.study_completed_uids.add(item.uid)
         else:
-            self._completed_uids.discard(item.uid)
+            self.coordinator.study_completed_uids.discard(item.uid)
             
-        await self._store.async_save({"completed": list(self._completed_uids)})
+        study_store = getattr(self.coordinator, "study_store", None)
+        if study_store:
+            await study_store.async_save({"completed": list(self.coordinator.study_completed_uids)})
         self.async_write_ha_state()
         async_dispatcher_send(self.hass, f"librus_apix_{self._config_entry.entry_id}_study_updated")
 

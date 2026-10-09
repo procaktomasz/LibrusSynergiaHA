@@ -1416,6 +1416,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .sensor import LibrusDataUpdateCoordinator
     coordinator = LibrusDataUpdateCoordinator(hass, client)
     client.coordinator = coordinator
+    await coordinator.async_init_study_store(entry.entry_id)
     await coordinator.async_config_entry_first_refresh()
     
     hass.data.setdefault(DOMAIN, {})

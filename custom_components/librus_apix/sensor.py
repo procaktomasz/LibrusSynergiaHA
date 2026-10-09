@@ -209,12 +209,22 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
         self._seen_note_ids: set = set()
         self._first_run: bool = True
         self.store = Store(hass, 1, f"{DOMAIN}_cache_{self.client.username}")
+        self.study_store: Optional[Store] = None
+        self.study_completed_uids: set = set()
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
             update_interval=SCAN_INTERVAL,
         )
+
+    async def async_init_study_store(self, entry_id: str) -> None:
+        """Inicjalizacja współdzielonego Store dla zadań nauki."""
+        if self.study_store is None:
+            self.study_store = Store(self.hass, 1, f"librus_apix_{entry_id}_study")
+            data = await self.study_store.async_load()
+            if data and isinstance(data, dict):
+                self.study_completed_uids = set(data.get("completed", []))
 
     async def _async_update_data(self) -> Dict[str, Any]:
         """Pobierz aktualne dane z API Librus."""

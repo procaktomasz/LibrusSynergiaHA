@@ -9,7 +9,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.helpers.storage import Store
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import DOMAIN
@@ -43,16 +42,15 @@ class LibrusStudyCompletedSensor(CoordinatorEntity, BinarySensorEntity):
         self._attr_device_class = None
         self._attr_icon = "mdi:gamepad-circle"
         
-        # Używamy tego samego Store co platforma todo, aby czytać zrobione zadania
-        self._store = Store(coordinator.hass, 1, f"librus_apix_{config_entry.entry_id}_study")
-        self._completed_uids = set()
+    @property
+    def _completed_uids(self) -> set:
+        return getattr(self.coordinator, "study_completed_uids", set())
 
     async def async_added_to_hass(self) -> None:
         """Kiedy encja zostaje dodana do HA."""
         await super().async_added_to_hass()
-        data = await self._store.async_load()
-        if data:
-            self._completed_uids = set(data.get("completed", []))
+        if hasattr(self.coordinator, "async_init_study_store"):
+            await self.coordinator.async_init_study_store(self._config_entry.entry_id)
             
         self.async_on_remove(
             async_dispatcher_connect(
@@ -64,16 +62,11 @@ class LibrusStudyCompletedSensor(CoordinatorEntity, BinarySensorEntity):
             
     async def _async_study_updated(self) -> None:
         """Wywoływane, gdy uczeń zaznaczy/odznaczy zadanie w panelu."""
-        data = await self._store.async_load()
-        if data:
-            self._completed_uids = set(data.get("completed", []))
         self.async_write_ha_state()
 
     async def async_update(self) -> None:
-        """Odświeża dane ze store przy aktualizacji (ponieważ todo może zapisać w tle)."""
-        data = await self._store.async_load()
-        if data:
-            self._completed_uids = set(data.get("completed", []))
+        """Odświeża stan encji."""
+        pass
 
     @property
     def device_info(self) -> Dict[str, Any]:
