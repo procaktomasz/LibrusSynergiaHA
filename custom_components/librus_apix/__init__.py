@@ -245,6 +245,7 @@ class LibrusApiClient:
         self._client: Client = None
         self._token = None
         self._auth_lock = asyncio.Lock()
+        self._message_cache = {}
 
     def _reset_auth(self) -> None:
         """Reset authentication state to force re-authentication on next call."""
@@ -455,14 +456,20 @@ class LibrusApiClient:
                         "unread": msg.unread,
                         "has_attachment": msg.has_attachment,
                     }
-                    if fetch_content:
-                        try:
-                            msg_data = await loop.run_in_executor(None, message_content, client, msg.href)
-                            content_str = msg_data.content if hasattr(msg_data, 'content') else str(msg_data)
-                            msg_dict["content"] = content_str.replace("\n", "<br>") if isinstance(content_str, str) else content_str
-                        except Exception as e:
-                            _LOGGER.warning("Could not fetch content for message %s: %s", msg.href, e)
-                            msg_dict["content"] = None
+                    if fetch_content or not msg.unread:
+                        if msg.href in self._message_cache:
+                            msg_dict["content"] = self._message_cache[msg.href]
+                        else:
+                            try:
+                                msg_data = await loop.run_in_executor(None, message_content, client, msg.href)
+                                content_str = msg_data.content if hasattr(msg_data, 'content') else str(msg_data)
+                                msg_dict["content"] = content_str.replace("\n", "<br>") if isinstance(content_str, str) else content_str
+                                self._message_cache[msg.href] = msg_dict["content"]
+                            except Exception as e:
+                                _LOGGER.warning("Could not fetch content for message %s: %s", msg.href, e)
+                                msg_dict["content"] = None
+                    else:
+                        msg_dict["content"] = None
                     
                     result.append(msg_dict)
 
