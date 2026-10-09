@@ -76,16 +76,29 @@ async def async_generate_summary(hass: HomeAssistant, entry_id: str, coordinator
     
     zadania = coordinator_data.get("zadania", [])[:5]  # Najblizsze 5 zadan
     
+    uwagi_raw = coordinator_data.get("uwagi", [])[:5]  # Ostatnie 5 uwag
+    uwagi_list = []
+    for u in uwagi_raw:
+        rodzaj = u.get("rodzaj", "inna")
+        tresc = u.get("tresc", "")
+        kategoria = u.get("kategoria", "")
+        nauczyciel = u.get("nauczyciel", "")
+        prefix = f"[{rodzaj.upper()}]" if rodzaj else ""
+        kat_str = f" {kategoria}:" if kategoria else ""
+        nauczyciel_str = f" (nauczyciel: {nauczyciel})" if nauczyciel else ""
+        uwagi_list.append(f"- {prefix}{kat_str} {tresc}{nauczyciel_str}".strip())
+    uwagi_str = chr(10).join(uwagi_list) if uwagi_list else "Brak uwag w dzienniku"
+
     oceny_str = chr(10).join(oceny) if oceny else "Brak nowych ocen"
     frekwencja_str = str(frekwencja.get("procent_semestr", "Brak danych"))
     nieobecnosci_str = json.dumps(nieobecnosci) if nieobecnosci else "Brak spóźnień i nieobecności"
     zadania_str = chr(10).join([f"- {z.get('przedmiot')}: {z.get('kategoria')} (termin: {z.get('termin')})" for z in zadania]) if zadania else "Brak nadchodzących sprawdzianów"
 
     prompt_parent = options.get("ai_prompt_weekly_parent", DEFAULT_PROMPT_WEEKLY_PARENT)
-    prompt_parent = prompt_parent.replace("{imie}", imie).replace("{oceny}", oceny_str).replace("{frekwencja}", frekwencja_str).replace("{nieobecnosci}", nieobecnosci_str).replace("{zadania}", zadania_str)
+    prompt_parent = prompt_parent.replace("{imie}", imie).replace("{oceny}", oceny_str).replace("{frekwencja}", frekwencja_str).replace("{nieobecnosci}", nieobecnosci_str).replace("{zadania}", zadania_str).replace("{uwagi}", uwagi_str)
     
     prompt_student = options.get("ai_prompt_weekly_student", DEFAULT_PROMPT_WEEKLY_STUDENT)
-    prompt_student = prompt_student.replace("{imie}", imie).replace("{oceny}", oceny_str).replace("{frekwencja}", frekwencja_str).replace("{nieobecnosci}", nieobecnosci_str).replace("{zadania}", zadania_str)
+    prompt_student = prompt_student.replace("{imie}", imie).replace("{oceny}", oceny_str).replace("{frekwencja}", frekwencja_str).replace("{nieobecnosci}", nieobecnosci_str).replace("{zadania}", zadania_str).replace("{uwagi}", uwagi_str)
 
     prompt = f"""
 Wykonaj podsumowanie tygodnia.
@@ -173,14 +186,14 @@ async def async_generate_messages_summary(hass: HomeAssistant, entry_id: str, co
         author = m.get("author", "")
         content = m.get("content") or "Brak pobranej treści"
         
-        info = f"Data: {date_str}\nOd: {author}\nTemat: {title}\nTreść: {content}"
+        info = f"- [Data: {date_str}] Od: {author} | Temat: {title}\n  Treść:\n  {content}"
         
         if m.get("unread"):
             nieprzeczytane.append(info)
         else:
             przeczytane.append(info)
             
-    stats = f"Do podsumowania zebrano {len(wiadomosci)} wiadomości (cała historia skrzynki), z czego {len(nieprzeczytane)} jest nieprzeczytanych."
+    stats = f"Statystyki skrzynki: łącznie {len(wiadomosci)} wiadomości (w tym {len(nieprzeczytane)} nieprzeczytanych, {len(przeczytane)} przeczytanych)."
     
     if not wiadomosci:
         _LOGGER.info("Brak wiadomości w skrzynce. Pomijam AI.")
