@@ -125,12 +125,12 @@ async def async_generate_messages_summary(hass: HomeAssistant, entry_id: str, co
     from datetime import date
     today_str = date.today().strftime("%Y-%m-%d")
     
-    dzisiejsze = [m for m in wiadomosci if m.get("date", "").startswith(today_str)]
+    dzisiejsze_lub_nieprzeczytane = [m for m in wiadomosci if m.get("date", "").startswith(today_str) or m.get("unread", False)]
     
     nieprzeczytane = []
     przeczytane = []
     
-    for m in dzisiejsze:
+    for m in dzisiejsze_lub_nieprzeczytane:
         title = m.get("title", "")
         author = m.get("author", "")
         content = m.get("content", "Brak pobranej treści")
@@ -142,10 +142,10 @@ async def async_generate_messages_summary(hass: HomeAssistant, entry_id: str, co
         else:
             przeczytane.append(info)
             
-    stats = f"Dzisiaj przyszło {len(dzisiejsze)} wiadomości, z czego {len(nieprzeczytane)} jest nieprzeczytanych."
+    stats = f"Do podsumowania zebrano {len(dzisiejsze_lub_nieprzeczytane)} wiadomości, z czego {len(nieprzeczytane)} jest nieprzeczytanych."
     
-    if not dzisiejsze:
-        _LOGGER.info("Brak wiadomości z dzisiaj. Pomijam AI.")
+    if not dzisiejsze_lub_nieprzeczytane:
+        _LOGGER.info("Brak wiadomości. Pomijam AI.")
         async_dispatcher_send(hass, f"librus_ai_messages_summary_{entry_id}", {"rodzic": "Brak wiadomości na dziś.", "uczen": "Brak wiadomości na dziś."})
         return
         
