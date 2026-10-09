@@ -1307,12 +1307,14 @@ def _fetch_notes(client) -> list | None:
             c["Id"]: c.get("CategoryName", "")
             for c in client.get(api + "Notes/Categories").json().get("Categories", [])
         }
-    except Exception:  # bez kategorii tez sie da
+    except Exception as ex:  # bez kategorii tez sie da
+        _LOGGER.debug("Nie udało się pobrać kategorii uwag: %s", ex)
         kategorie = {}
     try:
         users = client.get(api + "Users").json().get("Users", [])
         osoby = {u["Id"]: f"{u.get('LastName', '')} {u.get('FirstName', '')}".strip() for u in users}
-    except Exception:
+    except Exception as ex:
+        _LOGGER.debug("Nie udało się pobrać użytkowników dla uwag: %s", ex)
         osoby = {}
     return _map_notes(notes, kategorie, osoby)
 

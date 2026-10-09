@@ -349,8 +349,8 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                                     # Terminarz moze zwrocic "4", "4-5"
                                     if str(lekcja["numer"]) in str(ev_num).split("-"):
                                         score += 5
-                                except Exception:
-                                    pass
+                                except Exception as ex:
+                                    _LOGGER.debug("Błąd podczas dopasowywania numeru lekcji ze zdarzenia: %s", ex)
                             
                             if score > 0:
                                 scored_lekcje.append((score, lekcja))
@@ -397,8 +397,8 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                                         "zdarzenie_opis": opis_str,
                                     })
                                     day["lekcje"].sort(key=lambda x: (int(x.get("numer") or 99), x.get("godzina_od") or "99:99"))
-                                except Exception:
-                                    pass
+                                except Exception as ex:
+                                    _LOGGER.debug("Błąd podczas dodawania zdarzenia do planu lekcji: %s", ex)
 
             result = {
                 "student_info": student_info,
