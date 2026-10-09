@@ -952,7 +952,7 @@ class LibrusWiadomosciSensor(CoordinatorEntity, SensorEntity):
                 "nieprzeczytana": m.get("unread", False),
                 "jest_nowa": m.get("jest_nowa", False),
                 "ma_zalacznik": m.get("has_attachment", False),
-                "tresc": m.get("content", ""),
+                "tresc": m.get("content") or "",
             }
             for m in msgs
         ]

@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.storage import Store
 
 from librus_apix.client import Client, new_client
 from librus_apix.exceptions import TokenError
@@ -237,15 +238,80 @@ CONFIG_SCHEMA = vol.Schema(
 class LibrusApiClient:
     """Class to interface with the Librus API."""
 
-    def __init__(self, username: str, password: str, options: dict = None):
+    def __init__(self, username: str, password: str, options: dict = None, hass: HomeAssistant = None):
         """Initialize the client."""
         self.username = username
         self.password = password
         self.options = options or {}
+        self.hass = hass
         self._client: Client = None
         self._token = None
         self._auth_lock = asyncio.Lock()
         self._message_cache = {}
+        self._store = Store(hass, 1, f"{DOMAIN}_messages_cache_{self.username}") if hass else None
+        self._bg_fetch_task = None
+        self.coordinator = None
+
+    async def async_init_cache(self) -> None:
+        """Load cached message contents from persistent store."""
+        if self._store:
+            try:
+                cached = await self._store.async_load()
+                if isinstance(cached, dict):
+                    self._message_cache.update(cached)
+                    _LOGGER.debug("Zaladowano %d wiadomosci z trwalego cache dla %s", len(self._message_cache), self.username)
+            except Exception as ex:
+                _LOGGER.warning("Nie udalo sie wczytac cache wiadomosci dla %s: %s", self.username, ex)
+
+    async def async_save_cache(self) -> None:
+        """Save cached message contents to persistent store."""
+        if self._store:
+            try:
+                if len(self._message_cache) > 100:
+                    keys = list(self._message_cache.keys())
+                    for k in keys[:-100]:
+                        self._message_cache.pop(k, None)
+                await self._store.async_save(self._message_cache)
+            except Exception as ex:
+                _LOGGER.warning("Nie udalo sie zapisac cache wiadomosci dla %s: %s", self.username, ex)
+
+    def _start_background_message_fetcher(self, hrefs: list) -> None:
+        """Start background task to gently fetch message contents one by one."""
+        if not self.hass or (self._bg_fetch_task and not self._bg_fetch_task.done()):
+            return
+
+        async def _fetcher():
+            from librus_apix.messages import message_content
+            loop = asyncio.get_running_loop()
+            updated_any = False
+            for href in hrefs:
+                if href in self._message_cache:
+                    continue
+                try:
+                    if not self._client or not self._token:
+                        break
+                    msg_data = await loop.run_in_executor(None, message_content, self._client, href)
+                    content_str = msg_data.content if hasattr(msg_data, 'content') else str(msg_data)
+                    formatted_content = content_str.replace("\n", "<br>") if isinstance(content_str, str) else content_str
+                    self._message_cache[href] = formatted_content
+                    updated_any = True
+                    _LOGGER.debug("Pobrano tresc wiadomosci w tle dla %s", href)
+                    await asyncio.sleep(1.5)
+                except Exception as ex:
+                    _LOGGER.debug("Blad pobierania tresci wiadomosci %s w tle: %s", href, ex)
+                    await asyncio.sleep(1.0)
+
+            if updated_any:
+                await self.async_save_cache()
+                if self.coordinator and self.coordinator.data:
+                    msgs = self.coordinator.data.get("wiadomosci", [])
+                    for m in msgs:
+                        h = m.get("href")
+                        if h in self._message_cache:
+                            m["content"] = self._message_cache[h]
+                    self.coordinator.async_update_listeners()
+
+        self._bg_fetch_task = self.hass.async_create_task(_fetcher())
 
     def _reset_auth(self) -> None:
         """Reset authentication state to force re-authentication on next call."""
@@ -447,6 +513,7 @@ class LibrusApiClient:
                 fetch_content = self.options.get("fetch_messages_content", False)
 
                 result = []
+                missing_content_hrefs = []
                 for msg in messages:
                     msg_dict = {
                         "author": msg.author,
@@ -460,18 +527,15 @@ class LibrusApiClient:
                         if msg.href in self._message_cache:
                             msg_dict["content"] = self._message_cache[msg.href]
                         else:
-                            try:
-                                msg_data = await loop.run_in_executor(None, message_content, client, msg.href)
-                                content_str = msg_data.content if hasattr(msg_data, 'content') else str(msg_data)
-                                msg_dict["content"] = content_str.replace("\n", "<br>") if isinstance(content_str, str) else content_str
-                                self._message_cache[msg.href] = msg_dict["content"]
-                            except Exception as e:
-                                _LOGGER.warning("Could not fetch content for message %s: %s", msg.href, e)
-                                msg_dict["content"] = None
+                            msg_dict["content"] = None
+                            missing_content_hrefs.append(msg.href)
                     else:
                         msg_dict["content"] = None
                     
                     result.append(msg_dict)
+
+                if missing_content_hrefs and self.hass:
+                    self._start_background_message_fetcher(missing_content_hrefs)
 
                 return result
 
@@ -1338,19 +1402,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     password = entry.data[CONF_PASSWORD]
     options = entry.options
     
-    client = LibrusApiClient(username, password, options)
+    client = LibrusApiClient(username, password, options, hass=hass)
     
     # Test authentication
     if not await client.async_authenticate():
         _LOGGER.error("Failed to authenticate")
         return False
     
+    await client.async_init_cache()
+    
     entry.async_on_unload(entry.add_update_listener(update_listener))
     
     from .sensor import LibrusDataUpdateCoordinator
     coordinator = LibrusDataUpdateCoordinator(hass, client)
-    await coordinator.async_config_entry_first_refresh()
     client.coordinator = coordinator
+    await coordinator.async_config_entry_first_refresh()
     
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = client
@@ -1363,6 +1429,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    client = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if client and getattr(client, "_bg_fetch_task", None) and not client._bg_fetch_task.done():
+        client._bg_fetch_task.cancel()
+
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     
     if unload_ok:

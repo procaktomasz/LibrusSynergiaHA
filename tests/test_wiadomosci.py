@@ -77,3 +77,49 @@ def test_atrybut_dopelniony_do_5():
     attrs = _sensor(2).extra_state_attributes
     assert len(attrs["wiadomosci"]) == 5  # szablony kart oczekują min. 5 pozycji
     assert attrs["wiadomosci"][4]["temat"] == "Brak"
+
+
+@pytest.mark.asyncio
+async def test_wiadomosci_z_cache():
+    """Wiadomości obecne w cache otrzymują od razu treść."""
+    client = LibrusApiClient("user", "pass", {})
+    client._client = MagicMock()
+    client._token = "token"
+    client._message_cache["/wiadomosci/1/5/0"] = "Zapisana treść"
+
+    get_received = _skrzynka(10, 2)
+    with patch("librus_apix.messages.get_received", get_received):
+        res = await client.async_get_messages(count=2)
+    assert res[0]["content"] == "Zapisana treść"
+    assert res[1]["content"] is None  # brak w cache -> None na starcie
+
+
+@pytest.mark.asyncio
+async def test_init_i_save_cache():
+    """Test inicjalizacji i zapisu trwałego cache."""
+    from unittest.mock import AsyncMock
+    mock_store = MagicMock()
+    mock_store.async_load = AsyncMock(return_value={"/msg/1": "Treść 1"})
+    mock_store.async_save = AsyncMock()
+
+    client = LibrusApiClient("user", "pass", {})
+    client._store = mock_store
+
+    await client.async_init_cache()
+    assert client._message_cache["/msg/1"] == "Treść 1"
+
+    client._message_cache["/msg/2"] = "Treść 2"
+    await client.async_save_cache()
+    mock_store.async_save.assert_called_once_with(client._message_cache)
+
+
+def test_sensor_pusta_tresc_jako_pusty_string():
+    """Gdy treść wiadomości to None, sensor wystawia pusty string zamiast None."""
+    coordinator = MagicMock()
+    coordinator.data = {"wiadomosci": [
+        {"author": "Nauczyciel", "title": "Temat", "date": "2026-10-01", "unread": False, "content": None}
+    ]}
+    sensor = LibrusWiadomosciSensor(coordinator, MagicMock(entry_id="e1", options={}))
+    attrs = sensor.extra_state_attributes
+    assert attrs["wiadomosci"][0]["tresc"] == ""
+

@@ -132,11 +132,17 @@ async def async_generate_messages_summary(hass: HomeAssistant, entry_id: str, co
     nieprzeczytane = []
     przeczytane = []
     
+    client = hass.data.get("librus_apix", {}).get(entry_id)
+    if client and hasattr(client, "_message_cache"):
+        for m in wiadomosci:
+            if not m.get("content") and m.get("href") in client._message_cache:
+                m["content"] = client._message_cache[m.get("href")]
+
     for m in wiadomosci:
         date_str = m.get("date", "Brak daty")
         title = m.get("title", "")
         author = m.get("author", "")
-        content = m.get("content", "Brak pobranej treści")
+        content = m.get("content") or "Brak pobranej treści"
         
         info = f"Data: {date_str}\nOd: {author}\nTemat: {title}\nTreść: {content}"
         
