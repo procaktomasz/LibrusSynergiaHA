@@ -133,11 +133,12 @@ async def async_generate_messages_summary(hass: HomeAssistant, entry_id: str, co
     przeczytane = []
     
     for m in wiadomosci:
+        date_str = m.get("date", "Brak daty")
         title = m.get("title", "")
         author = m.get("author", "")
         content = m.get("content", "Brak pobranej treści")
         
-        info = f"Od: {author}\nTemat: {title}\nTreść: {content}"
+        info = f"Data: {date_str}\nOd: {author}\nTemat: {title}\nTreść: {content}"
         
         if m.get("unread"):
             nieprzeczytane.append(info)
