@@ -22,32 +22,33 @@ W najnowszej wersji wprowadziliśmy także wsparcie dla **Sztucznej Inteligencji
 
 Integracja tworzy następujące sensory:
 
-| Sensor | Opis | Wartość |
-|--------|------|---------|
-| `sensor.librus_uczen` | Informacje o uczniu (klasa, wychowawca, szkoła) | imię i nazwisko |
-| `sensor.librus_szczesliwy_numerek` | Szczęśliwy numerek dnia | numer |
-| `sensor.librus_oceny` | Wszystkie oceny bieżącego semestru; przy ocenach tekstowych/symbolicznych (np. `T`, `np`) pole `opis` zawiera ich treść z Librusa, np. "45%" | liczba ocen |
-| `sensor.librus_srednia_ocen` | **Globalna średnia** ze wszystkich przedmiotów | float (wykres 📈) |
-| `sensor.librus_wiadomosci` | Ostatnie wiadomości (domyślnie 10, konfigurowalne) | liczba nieprzeczytanych |
-| `sensor.librus_uwagi` | (NOWOŚĆ) Uwagi o zachowaniu z podziałem na typy | liczba uwag |
-| `sensor.librus_<przedmiot>` | Oceny z danego przedmiotu (np. `sensor.librus_matematyka`) | lista ocen: "4, 3+, 5" |
-| `sensor.librus_srednia_<przedmiot>` | **Średnia** z danego przedmiotu | float (wykres 📈) |
-| `sensor.librus_plan_lekcji` | Plan lekcji na pełne 7 dni z rozbiciem na dni tygodnia | - |
-| `sensor.librus_frekwencja` | Lista nieobecności i spóźnień, rozbicie oraz **frekwencja w %** | liczba nieobecności |
-| `sensor.librus_tematy_lekcji` | **Tematy zrealizowanych lekcji** z ostatnich 7 dni | liczba lekcji dzisiaj |
-| `sensor.librus_frekwencja` | Lista nieobecności i spóźnień, rozbicie na usprawiedliwione / nieusprawiedliwione / zwolnienia oraz **frekwencja w %** (semestr i rok) | liczba nieobecności |
-| `sensor.librus_tematy_lekcji` | **Tematy zrealizowanych lekcji** z ostatnich 7 dni wraz z wpisem frekwencji przy każdej lekcji (np. `nb` tylko na 1. lekcji) i zastępcą, jeśli lekcja była zastępstwem | liczba lekcji dzisiaj |
-| `sensor.librus_terminarz` | Nadchodzące wpisy terminarza (bieżący i następny miesiąc); każdy ma pole `rodzaj`: `sprawdzian`, `kartkowka`, `wydarzenie`, `zastepstwo`, `przesuniecie`, `odwolanie`, `nieobecnosc_nauczyciela`, `dzien_wolny` | liczba wpisów |
-| `sensor.librus_uwagi` | **Uwagi** (pozytywne, negatywne, neutralne) z treścią, kategorią, datą i nauczycielem | liczba uwag |
-| `sensor.librus_ogloszenia` | Najnowsze ogłoszenia | liczba ogłoszeń |
-| `sensor.librus_ai_summary_rodzic` | (NOWOŚĆ) Inteligentny raport dla rodzica | Pełny tekst raportu |
-| `sensor.librus_ai_summary_uczen` | (NOWOŚĆ) Inteligentny raport motywujący dla ucznia | Pełny tekst raportu |
+| Sensor / Przycisk | Opis | Wartość |
+|---|---|---|
+| `sensor.librus_[uczen]` | Informacje o uczniu (klasa, wychowawca, szkoła) | imię i nazwisko |
+| `sensor.librus_[uczen]_szczesliwy_numerek` | Szczęśliwy numerek dnia | numer |
+| `sensor.librus_[uczen]_oceny` | Wszystkie oceny bieżącego semestru; przy ocenach punktowych/procentowych zawiera pełną treść | liczba ocen |
+| `sensor.librus_[uczen]_srednia_ocen` | **Globalna średnia** ze wszystkich przedmiotów | float (wykres 📈) |
+| `sensor.librus_[uczen]_wiadomosci` | Ostatnie wiadomości (domyślnie 10, konfigurowalne) | liczba nieprzeczytanych |
+| `sensor.librus_[uczen]_uwagi` | (NOWOŚĆ) Uwagi o zachowaniu (pozytywne, negatywne, neutralne) | liczba uwag |
+| `sensor.librus_[uczen]_<przedmiot>` | Oceny z danego przedmiotu (np. `sensor.librus_matematyka`) | lista ocen: "4, 3+, 5" |
+| `sensor.librus_[uczen]_srednia_<przedmiot>` | **Średnia** z danego przedmiotu | float (wykres 📈) |
+| `sensor.librus_[uczen]_plan_lekcji` | Plan lekcji na pełne 7 dni z rozbiciem na dni tygodnia i zastępstwa | - |
+| `sensor.librus_[uczen]_frekwencja` | Lista nieobecności i spóźnień, rozbicie na usprawiedliwione / nieusprawiedliwione / zwolnienia oraz **frekwencja w %** | liczba nieobecności |
+| `sensor.librus_[uczen]_tematy_lekcji` | **Tematy zrealizowanych lekcji** z ostatnich 7 dni wraz z wpisem frekwencji i zastępcami | liczba lekcji dzisiaj |
+| `sensor.librus_[uczen]_terminarz` | Nadchodzące wpisy terminarza (sprawdziany, kartkówki, wydarzenia) | liczba wpisów |
+| `sensor.librus_[uczen]_ogloszenia` | Najnowsze ogłoszenia ze szkolnej tablicy | liczba ogłoszeń |
+| `sensor.librus_[uczen]_podsumowanie_ai_rodzic` | (NOWOŚĆ) Raport tygodniowy AI z postępów dla rodzica | Pełny tekst raportu |
+| `sensor.librus_[uczen]_podsumowanie_ai_uczen` | (NOWOŚĆ) Inteligentny raport motywujący na koniec tygodnia dla ucznia | Pełny tekst raportu |
+| `sensor.librus_[uczen]_podsumowanie_wiadomosci_ai_rodzic` | (NOWOŚĆ) Dzienne podsumowanie wiadomości AI dla rodzica | Zestawienie wiadomości |
+| `sensor.librus_[uczen]_podsumowanie_wiadomosci_ai_uczen` | (NOWOŚĆ) Dzienne podsumowanie wiadomości AI dla ucznia | Zadania i terminy |
 | `calendar.*_calendar_timetable` | Wbudowany kalendarz lekcji ucznia | wydarzenia |
 | `calendar.*_calendar_schedule` | Wbudowany kalendarz sprawdzianów i wydarzeń | wydarzenia |
 | `todo.*_todo_zadania_domowe_to_do` | Systemowa lista zadań domowych z terminami oddania | lista zadań |
-| `todo.*_todo_nauka_to_do` | (NOWOŚĆ) Systemowa lista przygotowań do sprawdzianów | przypomnienia |
+| `todo.*_todo_przygotowanie_do_lekcji_to_do` | (NOWOŚĆ) Systemowa lista przygotowań do sprawdzianów | przypomnienia |
 | `binary_sensor.*_nauka_odrobiona` | (NOWOŚĆ) Czujnik informujący, czy uczeń odrobił naukę | ON / OFF |
-| `button.*_generuj_podsumowanie_ai` | (NOWOŚĆ) Przycisk generujący raport AI | - |
+| `button.*_generuj_podsumowanie_ai` | (NOWOŚĆ) Przycisk generujący raport tygodniowy AI | - |
+| `button.*_generuj_podsumowanie_wiadomosci_ai` | (NOWOŚĆ) Przycisk generujący raport z wiadomości AI | - |
+| `button.*_odswiez_dane` | Przycisk ręcznego wymuszenia odświeżenia danych | - |
 
 Sensory średnich mają `state_class: measurement` — HA automatycznie rysuje dla nich wykres historyczny po kliknięciu w encję.
 
@@ -115,13 +116,13 @@ action:
       entity_id: button.librus_twoje_imie_generuj_podsumowanie_wiadomosci_ai
   - wait_for_trigger:
       - platform: state
-        entity_id: sensor.librus_twoje_imie_wiadomosci_ai_rodzic
+        entity_id: sensor.librus_twoje_imie_podsumowanie_wiadomosci_ai_rodzic
     timeout: "00:02:00"
     continue_on_timeout: false
   - service: notify.mobile_app_twoj_telefon
     data:
       title: "📬 Librus AI - Masz nową wiadomość!"
-      message: "{{ states('sensor.librus_twoje_imie_wiadomosci_ai_rodzic') }}"
+      message: "{{ states('sensor.librus_twoje_imie_podsumowanie_wiadomosci_ai_rodzic') }}"
 ```
 
 ## 📦 Instalacja
@@ -179,11 +180,11 @@ recorder:
       - sensor.librus_*_tematy_lekcji
       - sensor.librus_*_frekwencja
 ```
-=======
+
 ## 🧩 Gotowy panel
 
 Nie chcesz składać kart samodzielnie? W katalogu [`examples/dashboard`](examples/dashboard) jest gotowy panel „Szkoła” (strona główna + podwidok każdego ucznia) do wklejenia w edytorze kodu źródłowego panelu, oraz generator dla dowolnej liczby uczniów.
->>>>>>> main
+
 
 ## 📊 Przykładowe karty Lovelace
 
@@ -534,44 +535,13 @@ severity:
 
 ## 🔔 Zdarzenia (Events) i Powiadomienia na telefon
 
-<<<<<<< HEAD
-Integracja od wersji 3.0 wysyła automatyczne zdarzenia (Events), kiedy wykryje nowości (bez generowania duplikatów).
-Integracja wysyła zdarzenia Home Assistant gdy pojawi się nowa wiadomość, ocena lub wpis nieobecności/spóźnienia.
-Integracja wysyła zdarzenia Home Assistant gdy pojawi się nowa wiadomość, ocena lub uwaga.
-Zdarzenia są wykrywane przy każdym odświeżeniu (co 2h). Pierwsze uruchomienie tylko zapamiętuje stan — **nie wysyła duplikatów**.
+Integracja od wersji 3.0 wysyła automatyczne zdarzenia Home Assistant (Events), kiedy wykryje nowości w dzienniku (nowa ocena, wiadomość, uwaga, nieobecność, zadanie domowe lub wydarzenie w terminarzu). Zdarzenia wysyłane są bez duplikatów przy każdym cyklu odświeżania danych.
 
-> **Test bez czekania:** Idź do **Developer Tools → Events**, Event type: `librus_apix_nowa_wiadomosc`, Event data jak poniżej i kliknij **Fire Event**.
-
-### 📬 Powiadomienie o nowej wiadomości
-
-Zdarzenie: `librus_apix_nowa_wiadomosc`  
-Dostępne dane: `uczen` (Imię i Nazwisko z profilu), `nadawca`, `temat`, `data`, `ma_zalacznik`
-
-> **Uwaga:** Treść wiadomości nie jest pobierana celowo — aby nie oznaczać wiadomości jako przeczytanych w Librusie.
-
-```yaml
-automation:
-  - alias: "Librus - nowa wiadomosc"
-    trigger:
-      - platform: event
-        event_type: librus_apix_nowa_wiadomosc
-    action:
-      - service: notify.mobile_app_NAZWA_TWOJEGO_TELEFONU
-        data:
-          title: "📬 Librus: nowa wiadomość"
-          message: >-
-            Dotyczy: {{ trigger.event.data.uczen | default('Dziecko') }}
-            {% set msg = state_attr('sensor.librus_IMIE_NAZWISKO_wiadomosci', 'wiadomosci')
-               | selectattr('nieprzeczytana', 'equalto', true) | list | first | default({}) %}
-            Od: {{ msg.nadawca | default('nieznany') }}
-            Temat: {{ msg.temat | default('brak') }}
-```
-
-> **Uwaga:** Powyższa wiadomość korzysta z globalnego parametru `uczen`, dzięki czemu od razu wiadomo, którego profilu dotyczy powiadomienie. Zamień w kodzie `sensor.librus_IMIE_NAZWISKO_wiadomosci` na nazwę swojego sensora, jeśli chcesz pobrać więcej szczegółów z atrybutów.
+> **Test bez czekania:** Idź do **Narzędzia deweloperskie → Zdarzenia**, wpisz typ zdarzenia (np. `librus_apix_nowa_ocena`), uzupełnij przykładowe dane zdarzenia w formacie YAML/JSON i kliknij **Wyślij zdarzenie**.
 
 ### 📝 Powiadomienie o nowej ocenie
 Zdarzenie: `librus_apix_nowa_ocena`  
-Dostępne dane: `uczen`, `przedmiot`, `ocena`, `data`, `kategoria`, `nauczyciel`
+Dostępne dane: `uczen`, `przedmiot`, `ocena`, `data`, `kategoria`, `nauczyciel`, `opis`
 
 ```yaml
 automation:
@@ -592,38 +562,33 @@ automation:
 
 ### 📬 Powiadomienie o nowej wiadomości
 Zdarzenie: `librus_apix_nowa_wiadomosc`  
-Dostępne dane: `uczen`, `nadawca`, `temat`, `data`, `ma_zalacznik`
-### 🚸 Powiadomienie o nieobecności lub spóźnieniu
-
-Zdarzenie: `librus_apix_nowa_nieobecnosc`  
-Dostępne dane: `uczen`, `data`, `dzien_tygodnia`, `numer` (lekcji), `przedmiot`, `nauczyciel`, `rodzaj` (np. `nb`, `sp`, `u`, `zw`), `opis` (np. "nieobecność")
-
-Źródło: wpis frekwencji przy każdej zrealizowanej lekcji z ostatnich 7 dni (`sensor.librus_tematy_lekcji`). Obecność (`ob`) i wycieczka (`wy`) nie wysyłają zdarzeń. Zmiana wpisu, np. `nb` → `u` po usprawiedliwieniu, to nowe zdarzenie.
+Dostępne dane: `uczen` (Imię i Nazwisko z profilu), `nadawca`, `temat`, `data`, `ma_zalacznik`
 
 ```yaml
 automation:
-  - alias: "Librus - nieobecność lub spóźnienie"
+  - alias: "Librus - Nowa Wiadomość"
     trigger:
-      platform: event
-      event_type: librus_apix_nowa_nieobecnosc
+      - platform: event
+        event_type: librus_apix_nowa_wiadomosc
     action:
       - service: notify.mobile_app_NAZWA_TWOJEGO_TELEFONU
         data:
-          title: "🚸 {{ trigger.event.data.uczen }}: {{ trigger.event.data.opis or trigger.event.data.rodzaj }}"
+          title: "📬 {{ trigger.event.data.uczen }}: nowa wiadomość"
           message: >-
-            {{ trigger.event.data.dzien_tygodnia }} {{ trigger.event.data.data }},
-            lekcja {{ trigger.event.data.numer }}: {{ trigger.event.data.przedmiot }}
-### ⚠️ Powiadomienie o nowej uwadze
+            Od: {{ trigger.event.data.nadawca }}
+            Temat: {{ trigger.event.data.temat }}
+```
 
+### ⚠️ Powiadomienie o nowej uwadze
 Zdarzenie: `librus_apix_nowa_uwaga`  
 Dostępne dane: `uczen`, `data`, `rodzaj` (`pozytywna` / `negatywna` / `neutralna`), `kategoria`, `nauczyciel`, `tresc`
 
 ```yaml
 automation:
-  - alias: "Librus - nowa uwaga"
+  - alias: "Librus - Nowa Uwaga"
     trigger:
-      platform: event
-      event_type: librus_apix_nowa_uwaga
+      - platform: event
+        event_type: librus_apix_nowa_uwaga
     action:
       - service: notify.mobile_app_NAZWA_TWOJEGO_TELEFONU
         data:
@@ -633,24 +598,67 @@ automation:
           message: "{{ trigger.event.data.tresc }} ({{ trigger.event.data.nauczyciel }})"
 ```
 
-> **Gdzie znaleźć nazwę telefonu?** HA → Settings → Devices & Services → Mobile App → nazwa urządzenia (np. `notify.mobile_app_samsung_galaxy_s24`)
-
+### 🚸 Powiadomienie o nieobecności lub spóźnieniu
+Zdarzenie: `librus_apix_nowa_nieobecnosc`  
+Dostępne dane: `uczen`, `data`, `dzien_tygodnia`, `numer` (lekcji), `przedmiot`, `nauczyciel`, `rodzaj` (np. `nb`, `sp`, `u`, `zw`), `opis` (np. "nieobecność")
 
 ```yaml
 automation:
-  - alias: "Librus - nowa wiadomosc"
+  - alias: "Librus - Nieobecność lub Spóźnienie"
     trigger:
       - platform: event
-        event_type: librus_apix_nowa_wiadomosc
+        event_type: librus_apix_nowa_nieobecnosc
     action:
-      - service: notify.notify
+      - service: notify.mobile_app_NAZWA_TWOJEGO_TELEFONU
         data:
-          title: "📬 Librus: nowa wiadomość"
+          title: "🚸 {{ trigger.event.data.uczen }}: {{ trigger.event.data.opis or trigger.event.data.rodzaj }}"
           message: >-
-            Dotyczy: {{ trigger.event.data.uczen | default('Dziecko') }}
-            Od: {{ trigger.event.data.nadawca | default('nieznany') }}
-            Temat: {{ trigger.event.data.temat | default('brak') }}
+            {{ trigger.event.data.dzien_tygodnia }} {{ trigger.event.data.data }},
+            lekcja {{ trigger.event.data.numer }}: {{ trigger.event.data.przedmiot }}
 ```
+
+### 📚 Powiadomienie o nowym zadaniu domowym
+Zdarzenie: `librus_apix_nowe_zadanie`  
+Dostępne dane: `uczen`, `przedmiot`, `kategoria`, `termin`, `nauczyciel`
+
+```yaml
+automation:
+  - alias: "Librus - Nowe Zadanie Domowe"
+    trigger:
+      - platform: event
+        event_type: librus_apix_nowe_zadanie
+    action:
+      - service: notify.mobile_app_NAZWA_TWOJEGO_TELEFONU
+        data:
+          title: "📚 {{ trigger.event.data.uczen }}: nowe zadanie"
+          message: "{{ trigger.event.data.przedmiot }} ({{ trigger.event.data.kategoria }}), termin: {{ trigger.event.data.termin }}"
+```
+
+### 📅 Powiadomienie o nowym wpisie w terminarzu (sprawdzian / wydarzenie)
+Zdarzenie: `librus_apix_nowe_zdarzenie`  
+Dostępne dane: `uczen`, `data`, `tytul`, `przedmiot`, `godzina`
+
+```yaml
+automation:
+  - alias: "Librus - Nowe Wydarzenie w Terminarzu"
+    trigger:
+      - platform: event
+        event_type: librus_apix_nowe_zdarzenie
+    action:
+      - service: notify.mobile_app_NAZWA_TWOJEGO_TELEFONU
+        data:
+          title: "📅 {{ trigger.event.data.uczen }}: {{ trigger.event.data.tytul }}"
+          message: "{{ trigger.event.data.przedmiot }} na dzień {{ trigger.event.data.data }} {{ trigger.event.data.godzina }}"
+```
+
+## 🛠️ Usługa: Pobieranie pełnej treści wiadomości (`librus_apix.get_message`)
+
+Integracja udostępnia dedykowaną usługę `librus_apix.get_message` pozwalającą na pobranie pełnej treści pojedynczej wiadomości z Librusa na żądanie.
+
+* **Parametry usługi:**
+  * `url` (wymagany) – odnośnik (`href`) wiadomości, dostępny m.in. w atrybucie `wiadomosci` sensora `sensor.librus_[uczen]_wiadomosci`.
+* **Działanie:** Pobiera treść wiadomości i emituje zdarzenie `librus_apix_message_read` z polami `url` oraz `content`.
+* *Uwaga:* Pobranie wiadomości za pomocą tej usługi oznacza ją jako przeczytaną w portalu Librus Synergia.
 
 ## Zaawansowane: Harmonogram odpytywania Librusa
 
@@ -682,14 +690,22 @@ action:
 
 ## 🤖 Niestandardowe Prompty AI
 
-Integracja pozwala na zdefiniowanie własnych instrukcji (promptów) dla asystenta sztucznej inteligencji. Tworząc własny prompt, możesz użyć następujących zmiennych (tagów), które zostaną automatycznie podmienione na prawdziwe dane pobrane z Twojego dziennika Librus:
+Integracja pozwala na zdefiniowanie własnych instrukcji (promptów) w opcjach konfiguracji (Krok 2: Ustawienia AI). Możesz w nich użyć następujących zmiennych (tagów), które zostaną automatycznie podmienione na aktualne dane z Twojego dziennika Librus:
 
-* `{imie}` - Imię ucznia
-* `{oceny}` - Tekstowa lista nowych ocen z mijającego tygodnia
-* `{frekwencja}` - Wartość liczbowa (np. 85.5) oznaczająca procent frekwencji w obecnym semestrze
-* `{nieobecnosci}` - Słownik/lista podsumowująca ilość spóźnień, nieobecności i zwolnień
-* `{zadania}` - Nadchodzące zadania, sprawdziany i kartkówki
-* `{wiadomosci}` - Zlepiona w całość treść wiadomości ze skrzynki w Librusie
+### Dostępne znaczniki w Podsumowaniu Wiadomości:
+* `{dzisiejsza_data}` – Aktualna data (w formacie `RRRR-MM-DD`), ułatwiająca modelowi analizę aktualności i filtrowanie starszych wiadomości
+* `{imie}` – Imię ucznia
+* `{wiadomosci}` – Zestawienie statusu skrzynki, wiadomości nieodczytanych oraz odczytanych z pobraną treścią
+
+### Dostępne znaczniki w Podsumowaniu Tygodnia:
+* `{dzisiejsza_data}` – Bieżąca data
+* `{imie}` – Imię ucznia
+* `{oceny}` – Tekstowa lista nowych ocen zdobytych w mijającym tygodniu
+* `{frekwencja}` – Wartość liczbowa (np. 85.5) oznaczająca procent frekwencji w obecnym semestrze
+* `{nieobecnosci}` – Słownik/lista podsumowująca ilość spóźnień, nieobecności i zwolnień
+* `{uwagi}` – Treść pozytywnych i negatywnych uwag wpisanych przez nauczycieli
+* `{zadania}` – Nadchodzące zadania domowe, sprawdziany i kartkówki z terminarza
+
 
 ## 📝 Logi
 
