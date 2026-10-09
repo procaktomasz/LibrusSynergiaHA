@@ -31,20 +31,54 @@ Twoje dane z dziennika:
 """.strip()
 
 DEFAULT_PROMPT_MESSAGES_PARENT = """
-Jesteś asystentem zajętego rodzica. Przygotuj czytelne podsumowanie dnia z wiadomości szkolnych dotyczących ucznia ({imie}).
-Wymień:
-1. Podsumowanie statusu: ile jest nieprzeczytanych wiadomości i jakie mają tematy.
-2. Szczegółowe streszczenie treści każdej wiadomości na podstawie pobranego tekstu (zwracając szczególną uwagę na zebrania, wywiadówki, składki, komunikaty dyrekcji, prośby i uwagi nauczycieli).
-3. Ewentualne ważne informacje z wiadomości przeczytanych.
+Dzisiejsza data: {dzisiejsza_data}
+Uczeń: {imie}
 
-Oto zebrane wiadomości ze skrzynki:
+Działasz jako asystent rodzica. Przeanalizuj poniższe wiadomości ze szkoły i przygotuj zestawienie według szablonu.
+
+Reguła filtrowania:
+1. Sprawdź pole z datą wiadomości (format: RRRR-MM-DD HH:MM:SS) oraz status odczytania.
+2. Całkowicie pomiń wiadomości oznaczone jako odczytane, jeśli ich data jest starsza niż 3 dni względem {dzisiejsza_data}.
+3. Wiadomości oznaczone jako nieodczytane przetwarzaj zawsze, niezależnie od daty.
+
+Nieodczytane:
+* [Temat]: sedno sprawy, konkretna data, kwota oraz wymagana akcja rodzica.
+
+Odczytane:
+* [Temat]: sedno sprawy, konkretna data, kwota oraz wymagana akcja rodzica.
+
+
+Zasady przetwarzania i formatowania:
+1. Zadbaj o czytelne formatowanie Markdown: zawsze dodawaj pustą linię (odstęp) przed nagłówkami "Odczytane:" oraz "Nieodczytane:", tak aby nie zlewały się z poprzedzającą je listą wypunktowaną.
+2. Uwzględnij każdą wiadomość spełniającą kryteria filtrowania, niczego nie pomijaj.
+3. Jeśli w danej sekcji brak wiadomości, wpisz: Brak.
+4. Wyciągaj twarde dane: terminy, godziny, kwoty oraz nazwiska.
+
+Wiadomości:
 {wiadomosci}
 """.strip()
 
 DEFAULT_PROMPT_MESSAGES_STUDENT = """
-Jesteś asystentem ucznia ({imie}). Przygotuj dla niego zwięzłe, konkretne podsumowanie dnia z wiadomości szkolnych.
-Wskaż ile jest nowych/nieprzeczytanych wiadomości oraz podsumuj treść każdej z nich, wypisując w punktach wyłącznie to, co uczeń musi wiedzieć lub zrobić (np. zadania domowe, przygotowanie materiałów na lekcję, zapowiedziane kartkówki). Pomiń kwestie czysto administracyjne dla rodziców.
+Dzisiejsza data: {dzisiejsza_data}
+Uczeń: {imie}
 
-Oto zebrane wiadomości:
+Działasz jako asystent ucznia. Przeanalizuj poniższe wiadomości ze szkoły i przygotuj krótkie zestawienie według szablonu.
+
+Reguła filtrowania:
+1. Całkowicie pomiń wiadomości oznaczone jako odczytane, jeśli ich data jest starsza niż 3 dni względem {dzisiejsza_data}.
+2. Wiadomości oznaczone jako nieodczytane przetwarzaj zawsze, niezależnie od daty.
+
+Nieodczytane:
+* [Temat]: sedno sprawy, co uczeń musi przygotować lub zrobić (np. zadanie domowe, strój, przybory, sprawdzian).
+
+Odczytane:
+* [Temat]: sedno sprawy i wymagana akcja ucznia.
+
+Zasady:
+1. Pomiń sprawy czysto administracyjne dla rodziców (np. zebrania, płatności, składki). Wypisz tylko to, co bezpośrednio dotyczy ucznia.
+2. Jeśli w danej sekcji brak wiadomości, wpisz: Brak.
+3. Wyciągaj twarde dane: terminy, godziny, lekcje i materiały.
+
+Wiadomości:
 {wiadomosci}
 """.strip()

@@ -94,11 +94,30 @@ async def async_generate_summary(hass: HomeAssistant, entry_id: str, coordinator
     nieobecnosci_str = json.dumps(nieobecnosci) if nieobecnosci else "Brak spóźnień i nieobecności"
     zadania_str = chr(10).join([f"- {z.get('przedmiot')}: {z.get('kategoria')} (termin: {z.get('termin')})" for z in zadania]) if zadania else "Brak nadchodzących sprawdzianów"
 
+    from datetime import date
+    dzisiejsza_data = date.today().strftime("%Y-%m-%d")
+
     prompt_parent = options.get("ai_prompt_weekly_parent", DEFAULT_PROMPT_WEEKLY_PARENT)
-    prompt_parent = prompt_parent.replace("{imie}", imie).replace("{oceny}", oceny_str).replace("{frekwencja}", frekwencja_str).replace("{nieobecnosci}", nieobecnosci_str).replace("{zadania}", zadania_str).replace("{uwagi}", uwagi_str)
+    prompt_parent = (
+        prompt_parent.replace("{dzisiejsza_data}", dzisiejsza_data)
+        .replace("{imie}", imie)
+        .replace("{oceny}", oceny_str)
+        .replace("{frekwencja}", frekwencja_str)
+        .replace("{nieobecnosci}", nieobecnosci_str)
+        .replace("{zadania}", zadania_str)
+        .replace("{uwagi}", uwagi_str)
+    )
     
     prompt_student = options.get("ai_prompt_weekly_student", DEFAULT_PROMPT_WEEKLY_STUDENT)
-    prompt_student = prompt_student.replace("{imie}", imie).replace("{oceny}", oceny_str).replace("{frekwencja}", frekwencja_str).replace("{nieobecnosci}", nieobecnosci_str).replace("{zadania}", zadania_str).replace("{uwagi}", uwagi_str)
+    prompt_student = (
+        prompt_student.replace("{dzisiejsza_data}", dzisiejsza_data)
+        .replace("{imie}", imie)
+        .replace("{oceny}", oceny_str)
+        .replace("{frekwencja}", frekwencja_str)
+        .replace("{nieobecnosci}", nieobecnosci_str)
+        .replace("{zadania}", zadania_str)
+        .replace("{uwagi}", uwagi_str)
+    )
 
     prompt = f"""
 Wykonaj podsumowanie tygodnia.
@@ -200,16 +219,27 @@ async def async_generate_messages_summary(hass: HomeAssistant, entry_id: str, co
         async_dispatcher_send(hass, f"librus_ai_messages_summary_{entry_id}", {"rodzic": "Brak wiadomości.", "uczen": "Brak wiadomości."})
         return
         
-    dane_tekst = f"STATYSTYKI:\n{stats}\n\nNIEPRZECZYTANE:\n"
+    dane_tekst = f"STATUS SKRZYNKI:\n{stats}\n\nNIEODCZYTANE:\n"
     dane_tekst += "\n---\n".join(nieprzeczytane) if nieprzeczytane else "Brak"
-    dane_tekst += "\n\nPRZECZYTANE:\n"
+    dane_tekst += "\n\nODCZYTANE:\n"
     dane_tekst += "\n---\n".join(przeczytane) if przeczytane else "Brak"
 
+    from datetime import date
+    dzisiejsza_data = date.today().strftime("%Y-%m-%d")
+
     prompt_parent = options.get("ai_prompt_messages_parent", DEFAULT_PROMPT_MESSAGES_PARENT)
-    prompt_parent = prompt_parent.replace("{imie}", imie).replace("{wiadomosci}", dane_tekst)
+    prompt_parent = (
+        prompt_parent.replace("{dzisiejsza_data}", dzisiejsza_data)
+        .replace("{imie}", imie)
+        .replace("{wiadomosci}", dane_tekst)
+    )
         
     prompt_student = options.get("ai_prompt_messages_student", DEFAULT_PROMPT_MESSAGES_STUDENT)
-    prompt_student = prompt_student.replace("{imie}", imie).replace("{wiadomosci}", dane_tekst)
+    prompt_student = (
+        prompt_student.replace("{dzisiejsza_data}", dzisiejsza_data)
+        .replace("{imie}", imie)
+        .replace("{wiadomosci}", dane_tekst)
+    )
 
     # Złożony prompt do modelu
     prompt = f"""

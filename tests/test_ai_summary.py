@@ -67,3 +67,27 @@ def test_parse_empty():
     """Weryfikacja pustej odpowiedzi."""
     assert _parse_ai_json_response("") == {}
     assert _parse_ai_json_response("   \n  ") == {}
+
+
+def test_default_prompts_placeholders():
+    """Weryfikacja czy domyślne prompty zawierają wymagane placeholdery."""
+    from custom_components.librus_apix.ai_prompts import (
+        DEFAULT_PROMPT_MESSAGES_PARENT,
+        DEFAULT_PROMPT_MESSAGES_STUDENT,
+        DEFAULT_PROMPT_WEEKLY_PARENT,
+        DEFAULT_PROMPT_WEEKLY_STUDENT,
+    )
+    for p in (DEFAULT_PROMPT_MESSAGES_PARENT, DEFAULT_PROMPT_MESSAGES_STUDENT):
+        assert "{dzisiejsza_data}" in p
+        assert "{imie}" in p
+        assert "{wiadomosci}" in p
+
+    for p in (DEFAULT_PROMPT_WEEKLY_PARENT, DEFAULT_PROMPT_WEEKLY_STUDENT):
+        assert "{imie}" in p
+        assert "{oceny}" in p
+        assert "{frekwencja}" in p
+        assert "{nieobecnosci}" in p
+        assert "{zadania}" in p
+        assert "{uwagi}" in p
+
+
