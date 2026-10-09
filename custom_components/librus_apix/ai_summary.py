@@ -1,7 +1,7 @@
 import logging
 import json
+import re
 from homeassistant.core import HomeAssistant
-from homeassistant.components import conversation
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .ai_prompts import (
@@ -12,6 +12,45 @@ from .ai_prompts import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _parse_ai_json_response(result_text: str) -> dict:
+    """Odporne wyodrębnienie i sparsowanie obiektu JSON z odpowiedzi modelu AI."""
+    text = (result_text or "").strip()
+    if not text:
+        return {}
+
+    # 1. Bezpośrednia próba parsowania
+    try:
+        data = json.loads(text)
+        if isinstance(data, dict):
+            return data
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # 2. Blok markdown ```json ... ``` lub ``` ... ```
+    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if match:
+        try:
+            data = json.loads(match.group(1).strip())
+            if isinstance(data, dict):
+                return data
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    # 3. Pierwszy i ostatni nawias klamrowy { ... } w tekście
+    match = re.search(r"(\{.*\})", text, re.DOTALL)
+    if match:
+        try:
+            data = json.loads(match.group(1).strip())
+            if isinstance(data, dict):
+                return data
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    # 4. Fallback: jeśli model nie zwrócił poprawnego JSON
+    _LOGGER.warning("AI nie zwróciło poprawnego JSONa. Używam surowego tekstu.")
+    return {"rodzic": text, "uczen": text}
 
 async def async_generate_summary(hass: HomeAssistant, entry_id: str, coordinator_data: dict, agent_id: str, options: dict = None):
     """Generate Weekly AI Summary using Home Assistant conversation API."""
@@ -86,17 +125,7 @@ Format odpowiedzi:
             _LOGGER.error("Pusta odpowiedź od modelu AI.")
             return
             
-        # Oczyszczenie z markdown jesli model to zignorował
-        if result_text.startswith("```json"):
-            result_text = result_text.replace("```json", "", 1)
-        if result_text.endswith("```"):
-            result_text = result_text.rsplit("```", 1)[0]
-            
-        try:
-            result_json = json.loads(result_text.strip())
-        except json.JSONDecodeError:
-            _LOGGER.warning("AI nie zwróciło poprawnego JSONa. Używam surowego tekstu.")
-            result_json = {"rodzic": result_text.strip(), "uczen": result_text.strip()}
+        result_json = _parse_ai_json_response(result_text)
         
         rodzic_text = result_json.get("rodzic", "Brak danych dla rodzica")
         uczen_text = result_json.get("uczen", "Brak danych dla ucznia")
@@ -202,16 +231,7 @@ Format odpowiedzi:
         if not result_text:
             return
             
-        if result_text.startswith("```json"):
-            result_text = result_text.replace("```json", "", 1)
-        if result_text.endswith("```"):
-            result_text = result_text.rsplit("```", 1)[0]
-            
-        try:
-            result_json = json.loads(result_text.strip())
-        except json.JSONDecodeError:
-            _LOGGER.warning("AI nie zwróciło poprawnego JSONa. Używam surowego tekstu.")
-            result_json = {"rodzic": result_text.strip(), "uczen": result_text.strip()}
+        result_json = _parse_ai_json_response(result_text)
         
         async_dispatcher_send(
             hass, 
