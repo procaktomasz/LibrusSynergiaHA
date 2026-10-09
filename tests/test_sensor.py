@@ -77,3 +77,34 @@ async def test_student_info_getattr_fix(coordinator, mock_client):
     
     assert result["student_info"].name == "Piotr Nowak"
     # To potwierdza ze wywolania getattr(student_info, 'name') wewnatrz integracji nie zglosza AttributeError
+
+
+def test_ai_summary_sensors_device_info(coordinator):
+    """Test weryfikujacy spojna nazwe urzadzenia z uczniem dla sensorow AI."""
+    from custom_components.librus_apix.sensor import LibrusAISummarySensor, LibrusAIMessagesSummarySensor
+    from custom_components.librus_apix.const import DOMAIN
+
+    class FakeStudentInfo:
+        name = "Hubert Procak"
+
+    coordinator.data = {"student_info": FakeStudentInfo()}
+
+    config_entry = MagicMock()
+    config_entry.entry_id = "test_entry_ai"
+
+    # 1. Konstruktor z koordynatorem (nowy standard)
+    sensor_ai = LibrusAISummarySensor(coordinator, config_entry, "rodzic")
+    sensor_msg = LibrusAIMessagesSummarySensor(coordinator, config_entry, "uczen")
+
+    info_ai = sensor_ai.device_info
+    info_msg = sensor_msg.device_info
+
+    assert info_ai["name"] == "Librus - Hubert Procak"
+    assert info_ai["identifiers"] == {(DOMAIN, "test_entry_ai")}
+    assert info_msg["name"] == "Librus - Hubert Procak"
+    assert info_msg["identifiers"] == {(DOMAIN, "test_entry_ai")}
+
+    # 2. Konstruktor wstecznie kompatybilny (bez koordynatora)
+    sensor_legacy = LibrusAISummarySensor(config_entry, "rodzic")
+    assert sensor_legacy.device_info["name"] == "Librus - Librus"
+    assert sensor_legacy.device_info["identifiers"] == {(DOMAIN, "test_entry_ai")}

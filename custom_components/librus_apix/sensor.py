@@ -176,10 +176,10 @@ async def async_setup_entry(
 
     # Opcjonalne: Czujniki AI
     if config_entry.options.get("ai_summary_enabled", False):
-        entities.append(LibrusAISummarySensor(config_entry, "rodzic"))
-        entities.append(LibrusAISummarySensor(config_entry, "uczen"))
-        entities.append(LibrusAIMessagesSummarySensor(config_entry, "rodzic"))
-        entities.append(LibrusAIMessagesSummarySensor(config_entry, "uczen"))
+        entities.append(LibrusAISummarySensor(coordinator, config_entry, "rodzic"))
+        entities.append(LibrusAISummarySensor(coordinator, config_entry, "uczen"))
+        entities.append(LibrusAIMessagesSummarySensor(coordinator, config_entry, "rodzic"))
+        entities.append(LibrusAIMessagesSummarySensor(coordinator, config_entry, "uczen"))
 
     async_add_entities(entities)
 
@@ -607,10 +607,10 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 )
 
 
-def _device_info(coordinator: DataUpdateCoordinator, config_entry: ConfigEntry) -> Dict[str, Any]:
+def _device_info(coordinator: Optional[DataUpdateCoordinator], config_entry: ConfigEntry) -> Dict[str, Any]:
     """Zwroc informacje o urzadzeniu."""
-    data = coordinator.data or {}
-    student_info = data.get("student_info")
+    data = coordinator.data if coordinator else None
+    student_info = (data or {}).get("student_info")
     name = student_info.name if student_info else "Librus"
     return {
         "identifiers": {(DOMAIN, config_entry.entry_id)},
@@ -1206,13 +1206,21 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 class LibrusAISummarySensor(RestoreEntity, SensorEntity):
     """Czujnik z wygenerowanym podsumowaniem AI."""
 
-    def __init__(self, config_entry: ConfigEntry, target: str) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         """Inicjalizacja."""
-        self._config_entry = config_entry
-        self._target = target
+        if len(args) == 3:
+            self.coordinator, self._config_entry, self._target = args
+        elif len(args) == 2:
+            self.coordinator = None
+            self._config_entry, self._target = args
+        else:
+            self.coordinator = kwargs.get("coordinator")
+            self._config_entry = kwargs.get("config_entry")
+            self._target = kwargs.get("target")
+
         self._attr_has_entity_name = False
-        self._attr_name = f"Podsumowanie AI ({'Rodzic' if target == 'rodzic' else 'Uczeń'})"
-        self._attr_unique_id = f"{config_entry.entry_id}_ai_summary_{target}"
+        self._attr_name = f"Podsumowanie AI ({'Rodzic' if self._target == 'rodzic' else 'Uczeń'})"
+        self._attr_unique_id = f"{self._config_entry.entry_id}_ai_summary_{self._target}"
         self._attr_icon = "mdi:robot"
         self._attr_native_value = "Oczekuje na wygenerowanie..."
         self._attr_extra_state_attributes = {"pełny_tekst": "Oczekuje na wygenerowanie..."}
@@ -1220,13 +1228,13 @@ class LibrusAISummarySensor(RestoreEntity, SensorEntity):
 
     @property
     def device_info(self) -> Dict[str, Any]:
-        """Aby urządzenie pokazywało się pod integracją."""
-        return {
-            "identifiers": {(DOMAIN, self._config_entry.entry_id)},
-            "name": "Librus",
-            "manufacturer": "Librus",
-            "model": "Synergia",
-        }
+        """Informacje o urzadzeniu."""
+        coord = self.coordinator
+        if coord is None and getattr(self, "hass", None) and DOMAIN in self.hass.data:
+            client = self.hass.data[DOMAIN].get(self._config_entry.entry_id)
+            if client and hasattr(client, "coordinator"):
+                coord = client.coordinator
+        return _device_info(coord, self._config_entry)
 
     async def async_added_to_hass(self) -> None:
         """Kiedy encja jest dodana do HA."""
@@ -1268,13 +1276,21 @@ class LibrusAISummarySensor(RestoreEntity, SensorEntity):
 class LibrusAIMessagesSummarySensor(RestoreEntity, SensorEntity):
     """Czujnik przechowujący podsumowanie wiadomości z AI."""
 
-    def __init__(self, config_entry: ConfigEntry, target: str) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         """Inicjalizacja."""
-        self._config_entry = config_entry
-        self._target = target
+        if len(args) == 3:
+            self.coordinator, self._config_entry, self._target = args
+        elif len(args) == 2:
+            self.coordinator = None
+            self._config_entry, self._target = args
+        else:
+            self.coordinator = kwargs.get("coordinator")
+            self._config_entry = kwargs.get("config_entry")
+            self._target = kwargs.get("target")
+
         self._attr_has_entity_name = False
-        self._attr_name = f"Podsumowanie Wiadomości AI ({'Rodzic' if target == 'rodzic' else 'Uczeń'})"
-        self._attr_unique_id = f"{config_entry.entry_id}_ai_messages_summary_{target}"
+        self._attr_name = f"Podsumowanie Wiadomości AI ({'Rodzic' if self._target == 'rodzic' else 'Uczeń'})"
+        self._attr_unique_id = f"{self._config_entry.entry_id}_ai_messages_summary_{self._target}"
         self._attr_icon = "mdi:message-text"
         self._attr_native_value = "Oczekuje na wygenerowanie..."
         self._attr_extra_state_attributes = {"pełny_tekst": "Oczekuje na wygenerowanie..."}
@@ -1282,13 +1298,13 @@ class LibrusAIMessagesSummarySensor(RestoreEntity, SensorEntity):
 
     @property
     def device_info(self) -> Dict[str, Any]:
-        """Aby urządzenie pokazywało się pod integracją."""
-        return {
-            "identifiers": {(DOMAIN, self._config_entry.entry_id)},
-            "name": "Librus",
-            "manufacturer": "Librus",
-            "model": "Synergia",
-        }
+        """Informacje o urzadzeniu."""
+        coord = self.coordinator
+        if coord is None and getattr(self, "hass", None) and DOMAIN in self.hass.data:
+            client = self.hass.data[DOMAIN].get(self._config_entry.entry_id)
+            if client and hasattr(client, "coordinator"):
+                coord = client.coordinator
+        return _device_info(coord, self._config_entry)
 
     async def async_added_to_hass(self) -> None:
         """Kiedy encja jest dodana do HA."""
