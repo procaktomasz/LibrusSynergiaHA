@@ -9,8 +9,8 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
-from librus_apix.client import new_client
 
+from . import nowy_klient
 from .const import (
     CONF_SCAN_INTERVAL_OTHER,
     CONF_SCAN_INTERVAL_SCHOOL,
@@ -44,7 +44,7 @@ async def validate_input(hass: HomeAssistant, data: dict):
     try:
         import asyncio
         loop = asyncio.get_running_loop()
-        client = await loop.run_in_executor(None, new_client)
+        client = await loop.run_in_executor(None, nowy_klient)
         token = await loop.run_in_executor(None, client.get_token, username, password)
         
         if not token:

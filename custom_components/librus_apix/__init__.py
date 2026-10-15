@@ -16,8 +16,9 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 
-from librus_apix.client import Client, new_client
+from librus_apix.client import Client, Token, new_client
 from librus_apix.exceptions import TokenError
+from requests.cookies import RequestsCookieJar
 
 # Moduly ladowane razem z integracja: HA importuje ja w executorze, a import
 # wewnatrz funkcji async blokowalby petle zdarzen przy pierwszym uzyciu (start HA).
@@ -107,6 +108,20 @@ def is_exam_event(event: dict) -> bool:
         return True
     t = (event.get("tytul") or "").lower()
     return any(x in t for x in ("sprawdzian", "kartkówka", "kartkowka", "klasówka", "klasowka", "praca klasowa", "test"))
+
+
+def nowy_klient() -> Client:
+    """Nowy klient librus-apix z własnym tokenem i słoikiem ciasteczek.
+
+    W librus-apix 1.5.3 Client ma domyślne argumenty extra_cookies=RequestsCookieJar()
+    i token=Token(), tworzone raz przy imporcie, a new_client() nie przekazuje
+    ciasteczek. Wszystkie konta (np. dwoje dzieci) dzielą więc jeden słoik, w tym
+    oauth_token. Przy kilku kontach zapytania do gateway API (uwagi, frekwencja,
+    zajęcia dodatkowe) szły z tokenem innego konta i zwracały dane innego dziecka.
+    """
+    client = new_client(token=Token())
+    client.cookies = RequestsCookieJar()
+    return client
 
 
 def _get_oauth_token(client) -> str | None:
@@ -614,7 +629,7 @@ class LibrusApiClient:
                 return False
             try:
                 loop = asyncio.get_running_loop()
-                self._client = await loop.run_in_executor(None, new_client)
+                self._client = await loop.run_in_executor(None, nowy_klient)
                 if hasattr(self._client, "_session") and hasattr(self._client._session, "request"):
                     _orig_request = self._client._session.request
                     def _request_with_timeout(*args, **kwargs):
