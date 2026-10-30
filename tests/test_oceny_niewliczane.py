@@ -170,9 +170,10 @@ async def test_zdarzenia_dla_ocen_niewliczanych(hass):
         hass.bus.async_listen(EVENT_NOWA_OCENA, lambda e, z=zdarzenia: z.append(e.data))
         await koord._async_update_data()
         await hass.async_block_till_done()
-        assert [z["ocena"] for z in zdarzenia] == oczekiwane
+        # Kolejność dostarczania zdarzeń nie jest gwarantowana
+        assert sorted(z["ocena"] for z in zdarzenia) == sorted(oczekiwane)
         if pokazuj:
-            assert [z["liczona"] for z in zdarzenia] == [True, False, True]
+            assert {z["ocena"]: z["liczona"] for z in zdarzenia} == {"2-": True, "2": False, "4": True}
 
 
 async def test_stary_cache_bez_pola_liczona(hass):
