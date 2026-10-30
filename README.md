@@ -66,7 +66,7 @@ Lub ręcznie:
 
 ### Opcje integracji i Asystent AI
 Po zainstalowaniu integracji możesz dostosować jej działanie klikając **"Konfiguruj"** na karcie integracji:
-* **Krok 1 (Ustawienia ogólne):** Liczba pobieranych wiadomości, włączenie pobierania pełnej treści oraz liczba dni wyprzedzenia dla przypomnień o sprawdzianach (moduł To-Do) oraz częstotliwość odpytywania Librusa: osobno w dni robocze 7:00–16:00 (domyślnie co 15 min, zakres 15–240) i w pozostałym czasie (domyślnie co 120 min, zakres 30–720). Większe wartości to mniej zapytań do Librusa.
+* **Krok 1 (Ustawienia ogólne):** Liczba pobieranych wiadomości, włączenie pobierania pełnej treści oraz liczba dni wyprzedzenia dla przypomnień o sprawdzianach (moduł To-Do) oraz częstotliwość odpytywania Librusa: osobno w dni robocze 7:00–16:00 (domyślnie co 15 min, zakres 15–240) i w pozostałym czasie (domyślnie co 120 min, zakres 30–720). Większe wartości to mniej zapytań do Librusa. Opcja „Pokazuj oceny niewliczane do średniej” (domyślnie wyłączona) pokazuje oceny oznaczone w Librusie jako niewliczane (np. poprawione) z oznaczeniem `*` – bez niej są ukryte, jak w aplikacji mobilnej Librusa.
 * **Krok 2 (Asystent AI):** Włączenie generowania raportów, wybór agenta konwersacyjnego HA (np. OpenAI, Google Gemini, Ollama) oraz pełna personalizacja promptów.
 
 ---
@@ -80,12 +80,12 @@ Integracja tworzy następujące sensory i encje:
 | `sensor.librus_[uczen]` | Informacje o uczniu (klasa, wychowawca, szkoła) | imię i nazwisko |
 | `sensor.librus_[uczen]_szczesliwy_numerek` | Szczęśliwy numerek dnia | numer |
 | `sensor.librus_[uczen]_oceny` | Wszystkie oceny bieżącego semestru (liczbowe, punktowe/procentowe i opisowe – także z nowego schematu z obszarami oceniania); przy ocenach punktowych/procentowych zawiera pełną treść | liczba ocen |
-| `sensor.librus_[uczen]_srednia_ocen` | **Globalna średnia** ze wszystkich przedmiotów | float (wykres 📈) |
+| `sensor.librus_[uczen]_srednia_ocen` | **Globalna średnia** ze wszystkich przedmiotów (oceny 1–6, bez ocen niewliczanych do średniej) | float (wykres 📈) |
 | `sensor.librus_[uczen]_wiadomosci` | Ostatnie wiadomości (domyślnie 10, konfigurowalne) | liczba nieprzeczytanych |
 | `sensor.librus_[uczen]_uwagi` | (NOWOŚĆ) Uwagi o zachowaniu (pozytywne, negatywne, neutralne) | liczba uwag |
 | `sensor.librus_[uczen]_zachowanie` | (NOWOŚĆ v3.0.1) Punkty i oceny z zachowania (startowe, suma okres 1 i 2, oceny przewidywane i roczne oraz szczegółowe wpisy punktowe) | punkty zachowania lub ocena |
 | `sensor.librus_[uczen]_<przedmiot>` | Oceny z danego przedmiotu (np. `sensor.librus_matematyka`) | lista ocen: "4, 3+, 5" |
-| `sensor.librus_[uczen]_srednia_<przedmiot>` | **Średnia** z danego przedmiotu | float (wykres 📈) |
+| `sensor.librus_[uczen]_srednia_<przedmiot>` | **Średnia** z danego przedmiotu (oceny 1–6; przy samych wynikach procentowych – średnia z procentów, dodatkowo atrybut `srednia_procent`) | float (wykres 📈) |
 | `sensor.librus_[uczen]_plan_lekcji` | Plan lekcji na pełne 7 dni z rozbiciem na dni tygodnia i zastępstwa | - |
 | `sensor.librus_[uczen]_frekwencja` | Lista nieobecności i spóźnień, rozbicie na usprawiedliwione / nieusprawiedliwione / zwolnienia oraz **frekwencja w %** | liczba nieobecności |
 | `sensor.librus_[uczen]_tematy_lekcji` | **Tematy zrealizowanych lekcji** z ostatnich 7 dni wraz z wpisem frekwencji i zastępcami | liczba lekcji dzisiaj |
@@ -821,6 +821,11 @@ MIT License - patrz [LICENSE](LICENSE)
 ---
 
 ## 📝 Historia Zmian
+
+### v3.0.5
+- 🧮 **Poprawne średnie przy wynikach procentowych (Issue #52)**: Wyniki procentowe i punktowe (np. `68`, `95%`, `85/100`) nie są już mieszane z ocenami w skali 1–6 – jeśli przedmiot ma oceny 1–6, średnia liczona jest tylko z nich. Przedmioty z samymi wynikami procentowymi zachowują średnią z procentów, jak dotąd. Nowy atrybut `srednia_procent` pokazuje średnią z wyników procentowych przedmiotu.
+- ✏️ **Oceny niewliczane do średniej (np. poprawione)**: Oceny oznaczone w Librusie jako „Licz do średniej: nie” nie wpływają już na średnie i – tak jak w aplikacji mobilnej Librusa – są domyślnie ukryte. Nowa opcja **„Pokazuj oceny niewliczane do średniej”** pokazuje je z oznaczeniem `*` (np. `2-, 2*, 4`). Zmiana opcji działa od razu, bez ponownego pobierania danych z Librusa.
+- 🏷️ **Nowe atrybuty ocen**: `liczona` (czy ocena liczy się do średniej), `waga` oraz `poprawa_oceny` (np. `2 (Poprawa)` przy ocenie poprawiającej). Zdarzenie `librus_apix_nowa_ocena` zawiera pole `liczona`.
 
 ### v3.0.4
 - 👶 **Konta bez dostępu do dziennika (Issue #48)**: Konta, dla których Librus pokazuje stronę „Brak dostępu” (np. konta przedszkolne), nie powodują już ponownego logowania przy każdym odświeżeniu. Niedostępne moduły są pomijane przez dobę (jedno ostrzeżenie w logu na moduł), a dostępne – np. wiadomości – pobierane dalej. Przy dodawaniu konta, które nie ma dostępu ani do dziennika, ani do wiadomości, kreator wyświetla odpowiedni komunikat.
