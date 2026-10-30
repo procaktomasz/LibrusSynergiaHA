@@ -20,6 +20,7 @@ from homeassistant.helpers.update_coordinator import (
 from homeassistant.helpers.storage import Store
 
 from .const import (
+    CONF_POKAZUJ_NIELICZONE,
     CONF_SCAN_INTERVAL_OTHER,
     CONF_SCAN_INTERVAL_SCHOOL,
     DEFAULT_SCAN_INTERVAL_OTHER,
@@ -78,48 +79,53 @@ def _jest_nowa(date_str: str) -> bool:
     return False
 
 
-def _srednia_ocen(oceny: List[Dict]) -> Optional[float]:
-    """Oblicz srednia ocen z listy ocen."""
+def _podziel_oceny(oceny: List[Dict]) -> tuple:
+    """Rozdziel oceny na skale 1-6 (z +/-, literowe) i wyniki procentowe/punktowe.
+
+    Pomija oceny niewliczane do sredniej (liczona: false).
+    """
     import re
-    wartosci = []
-    
+    skala: List[float] = []
+    procenty: List[float] = []
+
     literowe = {"A": 5.0, "B": 4.0, "C": 2.0, "D": 1.0, "E": 1.0, "F": 1.0}
-    
+
     for g in oceny:
-        grade_str = g.get("ocena", "").strip()
+        if g.get("liczona") is False:
+            continue
+        grade_str = g.get("ocena", "").strip().rstrip("*")
         if not grade_str:
             continue
 
         # Ocena punktowa ze znana skala (np. 14 w skali 0-20) - liczymy procent
         if g.get("punktowa") and g.get("procent") is not None:
-            wartosci.append(float(g["procent"]))
+            procenty.append(float(g["procent"]))
             continue
 
         try:
             # 1. Sprawdz czy to czysta liczba wielocyfrowa lub z %/p/pkt (np. 95, 100, 95%, 85 pkt)
             if grade_str.isdigit() and len(grade_str) > 1:
                 # Jesli dwu- lub trzycyfrowa, np. 95, bierzemy calosc jako punktacja
-                wartosci.append(float(grade_str))
+                procenty.append(float(grade_str))
                 continue
-                
+
             match = re.search(r'^(\d+)(?:\s*(?:%|p|pkt))?$', grade_str.lower())
             if match:
                 val = float(match.group(1))
                 if val > 6 or grade_str.lower().endswith(('%', 'p', 'pkt')):
-                    wartosci.append(val)
+                    procenty.append(val)
                     continue
-                    
+
             # 1b. Sprawdź format X/Y (np. 85/100)
             if "/" in grade_str:
                 parts = grade_str.split("/")
                 if len(parts) == 2 and parts[0].strip().isdigit() and parts[1].strip().isdigit():
                     num = float(parts[0].strip())
                     den = float(parts[1].strip())
-                    # Jeśli to punkty, możemy po prostu dodać wartość (lub zignorować ze średniej, ale załóżmy dodanie punktów)
                     if den == 100:
-                        wartosci.append(num)
+                        procenty.append(num)
                     else:
-                        wartosci.append(num / den * 100)
+                        procenty.append(num / den * 100)
                     continue
 
             # 2. Sprawdz czy to ocena literowa (klasy 1-3)
@@ -131,7 +137,7 @@ def _srednia_ocen(oceny: List[Dict]) -> Optional[float]:
                         base += 0.5
                     elif "-" in grade_str:
                         base -= 0.25
-                wartosci.append(base)
+                skala.append(base)
                 continue
 
             # 3. Standardowa logika Librusa 1-6
@@ -141,10 +147,28 @@ def _srednia_ocen(oceny: List[Dict]) -> Optional[float]:
                     base += 0.5
                 elif "-" in grade_str:
                     base -= 0.25
-            wartosci.append(base)
+            skala.append(base)
         except (ValueError, IndexError):
             continue
+    return skala, procenty
+
+
+def _srednia_ocen(oceny: List[Dict]) -> Optional[float]:
+    """Srednia ocen (bez ocen niewliczanych do sredniej).
+
+    Wyniki procentowe/punktowe nie mieszaja sie z ocenami 1-6 (#52): gdy sa
+    oceny 1-6, srednia liczona jest tylko z nich. Gdy sa wylacznie wyniki
+    procentowe, srednia jest z procentow - jak dotad.
+    """
+    skala, procenty = _podziel_oceny(oceny)
+    wartosci = skala or procenty
     return round(sum(wartosci) / len(wartosci), 2) if wartosci else None
+
+
+def _srednia_procent(oceny: List[Dict]) -> Optional[float]:
+    """Srednia z wynikow procentowych/punktowych (None gdy ich brak)."""
+    _, procenty = _podziel_oceny(oceny)
+    return round(sum(procenty) / len(procenty), 2) if procenty else None
 
 
 # Symbole liczone jako obecnosc (jak w librus_apix.attendance.get_attendance_frequency)
@@ -338,6 +362,11 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                     _LOGGER.debug("Nie udało się wczytać znacznika czasu cache dla %s: %s", self.client.username, meta_ex)
                 if "student_info" in cached and isinstance(cached["student_info"], dict):
                     cached["student_info"] = _student_info_from_dict(cached["student_info"])
+                # Oceny wg bieżącej opcji pokazywania ocen niewliczanych (bez pytania
+                # Librusa). Cache sprzed tej zmiany nie ma oceny_wszystkie - zostaje
+                # jak był i poprawi się przy najbliższym pobraniu.
+                if isinstance(cached.get("oceny_wszystkie"), list):
+                    cached["oceny"], cached["oceny_wg_przedmiotu"] = self._przygotuj_oceny(cached["oceny_wszystkie"])
                 _LOGGER.debug("Pomyślnie załadowano pełny stan z dyskowego cache dla %s", self.client.username)
                 return cached
         except Exception as ex:
@@ -354,13 +383,45 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
             return None
         return time.time() - self._cache_pobrano
 
+    def _przygotuj_oceny(self, wszystkie: List[Dict]) -> tuple:
+        """Widoczne oceny i oceny wg przedmiotu wg opcji integracji.
+
+        Oceny niewliczane do sredniej (np. poprawione) sa domyslnie ukryte, jak
+        w aplikacji Librusa; po wlaczeniu opcji widoczne z dopiskiem "*".
+        """
+        pokazuj = bool(self.client.options.get(CONF_POKAZUJ_NIELICZONE, False))
+        widoczne = [g for g in wszystkie if pokazuj or g.get("liczona", True) is not False]
+        oceny_wg_przedmiotu: Dict[str, List[Dict]] = {}
+        for grade in widoczne:
+            liczona = grade.get("liczona", True) is not False
+            ocena = {
+                "ocena": grade["grade"] if liczona else f"{grade['grade']}*",
+                "data": grade["date"],
+                "kategoria": grade["category"],
+                "nauczyciel": grade["teacher"],
+                "semestr": grade.get("semester"),
+                "komentarz": grade.get("komentarz", ""),
+                "opis": grade.get("opis", ""),
+                "jest_nowa": _jest_nowa(grade["date"]),
+                "liczona": liczona,
+                "waga": grade.get("waga"),
+                "poprawa_oceny": grade.get("poprawa_oceny", ""),
+            }
+            if grade.get("type") == "points":
+                ocena["punktowa"] = True
+                ocena["max_punktow"] = grade.get("max_points")
+                ocena["procent"] = grade.get("percent")
+            oceny_wg_przedmiotu.setdefault(grade["subject"], []).append(ocena)
+        return widoczne, oceny_wg_przedmiotu
+
     def seed_seen_from_cached_data(self, data: Dict[str, Any]) -> None:
         """Zainicjalizuj zbiory widzianych elementów z cache, aby uniknąć fałszywych powiadomień."""
         self._first_run = False
         for msg in data.get("wiadomosci", []):
             if isinstance(msg, dict) and "href" in msg:
                 self._seen_message_hrefs.add(msg["href"])
-        for grade in data.get("oceny", []):
+        # Wszystkie oceny, takze ukryte - wlaczenie opcji nie zglosi ich jako nowych
+        for grade in data.get("oceny_wszystkie", data.get("oceny", [])):
             if isinstance(grade, dict) and "subject" in grade:
                 self._seen_grade_ids.add(
                     (grade["subject"], grade.get("date"), grade.get("grade"))
@@ -461,7 +522,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                     "(jesli sa) lub pustej listy. Jesli blad sie powtarza, konto moze "
                     "nie miec dostepu do dziennika ocen (np. konto przedszkolaka)."
                 )
-                grades = prev.get("oceny", [])
+                grades = prev.get("oceny_wszystkie", prev.get("oceny", []))
 
             if student_info is None:
                 student_info = prev.get("student_info")
@@ -472,27 +533,11 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 else prev.get("zachowanie", {})
             )
 
-            # Grupuj oceny wg przedmiotu i oznacz nowe
-            oceny_wg_przedmiotu: Dict[str, List[Dict]] = {}
-            for grade in grades:
-                subject = grade["subject"]
-                if subject not in oceny_wg_przedmiotu:
-                    oceny_wg_przedmiotu[subject] = []
-                ocena = {
-                    "ocena": grade["grade"],
-                    "data": grade["date"],
-                    "kategoria": grade["category"],
-                    "nauczyciel": grade["teacher"],
-                    "semestr": grade.get("semester"),
-                    "komentarz": grade.get("komentarz", ""),
-                    "opis": grade.get("opis", ""),
-                    "jest_nowa": _jest_nowa(grade["date"]),
-                }
-                if grade.get("type") == "points":
-                    ocena["punktowa"] = True
-                    ocena["max_punktow"] = grade.get("max_points")
-                    ocena["procent"] = grade.get("percent")
-                oceny_wg_przedmiotu[subject].append(ocena)
+            # Wszystkie oceny (takze niewliczane) trafiaja do danych i cache, a
+            # ukrywanie i "*" wg opcji stosujemy przy budowaniu stanu - takze
+            # przy starcie z cache, wiec zmiana opcji dziala bez pytania Librusa.
+            oceny_wszystkie = grades
+            grades, oceny_wg_przedmiotu = self._przygotuj_oceny(oceny_wszystkie)
 
             wiadomosci = (
                 self._build_wiadomosci(messages)
@@ -722,6 +767,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
             result = {
                 "student_info": student_info,
                 "oceny": grades,
+                "oceny_wszystkie": oceny_wszystkie,
                 "oceny_wg_przedmiotu": oceny_wg_przedmiotu,
                 "wiadomosci": wiadomosci,
                 "zadania": zadania,
@@ -758,7 +804,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 self._first_run = False
                 for msg in wiadomosci:
                     self._seen_message_hrefs.add(msg["href"])
-                for grade in grades:
+                for grade in oceny_wszystkie:
                     self._seen_grade_ids.add(
                         (grade["subject"], grade["date"], grade["grade"])
                     )
@@ -825,6 +871,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                         "kategoria": grade["category"],
                         "nauczyciel": grade["teacher"],
                         "opis": grade.get("opis", ""),
+                        "liczona": grade.get("liczona", True) is not False,
                     },
                 )
 
@@ -1111,6 +1158,7 @@ class LibrusPrzedmiotSensor(CoordinatorEntity, SensorEntity):
             "oceny": oceny,
             "lista_ocen": ", ".join(g["ocena"] for g in oceny),
             "srednia": srednia,
+            "srednia_procent": _srednia_procent(oceny),
             "najnowsza_ocena": najnowsza,
             "sa_nowe_oceny": any(g["jest_nowa"] for g in oceny),
         }
@@ -1195,6 +1243,7 @@ class LibrusSredniaPrzedmiotuSensor(CoordinatorEntity, SensorEntity):
             "przedmiot": self._subject,
             "lista_ocen": ", ".join(g["ocena"] for g in oceny),
             "liczba_ocen": len(oceny),
+            "srednia_procent": _srednia_procent(oceny),
         }
 
 

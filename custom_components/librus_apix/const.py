@@ -16,6 +16,8 @@ CONF_SCAN_INTERVAL_SCHOOL = "scan_interval_school_minutes"
 CONF_SCAN_INTERVAL_OTHER = "scan_interval_minutes"
 DEFAULT_SCAN_INTERVAL_SCHOOL = 15   # dni robocze 7:00-16:00
 DEFAULT_SCAN_INTERVAL_OTHER = 120   # pozostale godziny i weekendy
+# Pokazywanie ocen niewliczanych do sredniej (z dopiskiem "*"), domyslnie ukryte
+CONF_POKAZUJ_NIELICZONE = "show_not_counted_grades"
 
 # Default values
 DEFAULT_MESSAGES_COUNT = 10
@@ -29,4 +31,4 @@ def is_exam_event(event: dict) -> bool:
     if rodzaj in ("sprawdzian", "kartkowka"):
         return True
     t = (event.get("tytul") or "").lower()
-    return any(x in t for x in ("sprawdzian", "kartkówka", "kartkowka", "klasówka", "klasowka", "praca klasowa", "test"))
+    return any(x in t for x in ("sprawdzian", "kartkówka", "kartkowka", "klasówka", "klasowka", "praca klasowa", "test"))

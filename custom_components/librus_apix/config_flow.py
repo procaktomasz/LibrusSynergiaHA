@@ -12,6 +12,7 @@ from librus_apix.exceptions import TokenError
 
 from . import nowy_klient
 from .const import (
+    CONF_POKAZUJ_NIELICZONE,
     CONF_SCAN_INTERVAL_OTHER,
     CONF_SCAN_INTERVAL_SCHOOL,
     DEFAULT_SCAN_INTERVAL_OTHER,
@@ -164,6 +165,10 @@ class LibrusApixOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_SCAN_INTERVAL_OTHER,
                     default=self.entry.options.get(CONF_SCAN_INTERVAL_OTHER, DEFAULT_SCAN_INTERVAL_OTHER),
                 ): vol.All(vol.Coerce(int), vol.Range(min=30, max=720)),
+                vol.Optional(
+                    CONF_POKAZUJ_NIELICZONE,
+                    default=self.entry.options.get(CONF_POKAZUJ_NIELICZONE, False),
+                ): bool,
             }
         )
 

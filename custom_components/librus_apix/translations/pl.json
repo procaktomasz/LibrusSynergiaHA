@@ -29,7 +29,8 @@
           "fetch_messages_content": "Pobieraj pełną treść wiadomości (Oznacza je jako przeczytane w systemie Librus!)",
           "days_before_exam_study": "Ile dni przed sprawdzianem przypominać o nauce? (0 = wyłączone)",
           "scan_interval_school_minutes": "Co ile minut odpytywać Librusa w dni robocze 7:00–16:00 (domyślnie 15; większa wartość = mniej zapytań)",
-          "scan_interval_minutes": "Co ile minut odpytywać Librusa poza tymi godzinami i w weekendy (domyślnie 120)"
+          "scan_interval_minutes": "Co ile minut odpytywać Librusa poza tymi godzinami i w weekendy (domyślnie 120)",
+          "show_not_counted_grades": "Pokazuj oceny niewliczane do średniej (np. poprawione) – z oznaczeniem \"*\""
         }
       },
       "ai": {

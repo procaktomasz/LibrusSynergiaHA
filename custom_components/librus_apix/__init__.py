@@ -184,6 +184,23 @@ def _opis_oceny(desc: str) -> str:
                     opis.append(nxt.strip())
             break
     return " · ".join(x for x in opis if x)
+
+
+def _liczona_z_opisu(desc: str) -> bool:
+    """Czy ocena liczy sie do sredniej.
+
+    False tylko przy jawnym "Licz do sredniej: nie" w opisie - biblioteka zwraca
+    counts=False takze wtedy, gdy tej informacji w opisie w ogole nie ma.
+    """
+    return not re.search(r"Licz do średniej:\s*nie\b", desc or "", re.IGNORECASE)
+
+
+def _poprawa_z_opisu(desc: str) -> str:
+    """Ktora ocene poprawia ta ocena, np. "2 (Poprawa)" ("" gdy to nie poprawa)."""
+    m = re.search(r"^Poprawa oceny:\s*(.+)$", desc or "", re.MULTILINE)
+    return m.group(1).strip() if m else ""
+
+
 def _parse_point_grades(html) -> list:
     """Odczytaj oceny z sekcji "Oceny punktowe" strony ocen.
 
@@ -245,6 +262,10 @@ def _parse_point_grades(html) -> list:
                     "max_points": max_points,
                     "percent": percent,
                     "counts": attrs.get("Licz do wyniku", "").upper() == "TAK",
+                    # Niewliczana tylko przy jawnym "NIE"
+                    "liczona": attrs.get("Licz do wyniku", "").strip().upper() != "NIE",
+                    "waga": None,
+                    "poprawa_oceny": "",
                 })
     return result
 
@@ -821,7 +842,10 @@ class LibrusApiClient:
                                 'semester': grade.semester,
                                 'komentarz': komentarz_str,
                                 'opis': _opis_oceny(getattr(grade, 'desc', '')),
-                                'type': 'numeric'
+                                'type': 'numeric',
+                                'liczona': _liczona_z_opisu(getattr(grade, 'desc', '')),
+                                'waga': getattr(grade, 'weight', None),
+                                'poprawa_oceny': _poprawa_z_opisu(getattr(grade, 'desc', '')),
                             })
 
                 # Process descriptive grades (only current semester, many are actually numeric)
@@ -884,7 +908,10 @@ class LibrusApiClient:
                                     'semester': desc_grade.semester,
                                     'komentarz': parsed_comment,
                                     'opis': _opis_oceny(desc_text) or parsed_content,
-                                    'type': 'descriptive'
+                                    'type': 'descriptive',
+                                    'liczona': _liczona_z_opisu(desc_text),
+                                    'waga': getattr(desc_grade, 'weight', None),
+                                    'poprawa_oceny': _poprawa_z_opisu(desc_text),
                                 })
 
                 # Oceny punktowe pobrane z tego samego żądania. Biblioteka potrafi

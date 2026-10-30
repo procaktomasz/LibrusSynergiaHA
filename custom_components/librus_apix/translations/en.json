@@ -29,7 +29,8 @@
           "fetch_messages_content": "Fetch full message content (Marks them as read in Librus system!)",
           "days_before_exam_study": "How many days before exam to remind about studying? (0 = disabled)",
           "scan_interval_school_minutes": "Polling interval on school days 7:00-16:00, in minutes (default 15, fewer requests to Librus with a higher value)",
-          "scan_interval_minutes": "Polling interval at other times and on weekends, in minutes (default 120)"
+          "scan_interval_minutes": "Polling interval at other times and on weekends, in minutes (default 120)",
+          "show_not_counted_grades": "Show grades not counted towards the average (e.g. improved grades), marked with \"*\""
         }
       },
       "ai": {
