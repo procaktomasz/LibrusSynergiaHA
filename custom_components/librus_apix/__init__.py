@@ -129,14 +129,20 @@ def _szczegoly_zdarzenia(data: dict | None) -> dict[str, str]:
     return szczegoly
 
 
-def _przedmiot_zdarzenia(przedmiot: str | None, tytul: str | None) -> str:
-    """Przedmiot wpisu terminarza bez powtorzenia tytulu.
+_ZASTEPSTWO_PRZEDMIOT = re.compile(r"na lekcji nr:?\s*\d+\s*\((.+)\)\s*$", re.IGNORECASE)
 
-    Zastepstwa nie maja osobnego przedmiotu, wiec biblioteka powtarza tytul.
+
+def _przedmiot_zdarzenia(przedmiot: str | None, tytul: str | None) -> str:
+    """Przedmiot wpisu terminarza.
+
+    Zastepstwa nie maja osobnego przedmiotu (biblioteka powtarza tytul), wiec
+    bierzemy nazwe z konca tytulu: "... na lekcji nr: 4 (wychowanie fizyczne)".
+    Pozostale wpisy (np. dni wolne) zostaja bez zmian.
     """
     przedmiot = (przedmiot or "").strip()
-    if przedmiot == (tytul or "").strip():
-        return ""
+    tytul = (tytul or "").strip()
+    if przedmiot == tytul and (m := _ZASTEPSTWO_PRZEDMIOT.search(tytul)):
+        return m.group(1).strip()
     return przedmiot
 
 

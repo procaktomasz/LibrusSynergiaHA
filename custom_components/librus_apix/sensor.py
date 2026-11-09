@@ -596,9 +596,6 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                             or "zastepstwo" in (ev_title or "").lower()
                             or " na lekcji nr" in (ev_title or "").lower()
                         )
-                        if is_substitution and not ev_subject:
-                            # Zastepstwo nie ma osobnego przedmiotu: nazwa jest w tytule "(Biologia)"
-                            ev_subject = ev_title
                         ev_teacher = None
                         if isinstance(t_ev.get("szczegoly"), dict):
                             raw_teacher = t_ev["szczegoly"].get("Nauczyciel")
@@ -929,8 +926,10 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
         """Wyslij zdarzenia HA dla nowych zdarzen w kalendarzu."""
         for zdarzenie in terminarz:
             ev_id = (zdarzenie["data"], zdarzenie["tytul"], zdarzenie["przedmiot"])
-            if not ev_id[2] and (ev_id[0], ev_id[1], ev_id[1]) in self._seen_schedule_ids:
-                # Dawniej przedmiot powtarzal tytul: ten sam wpis, nie "nowe zdarzenie".
+            if ev_id[2] != ev_id[1] and any(
+                (ev_id[0], ev_id[1], stary) in self._seen_schedule_ids for stary in (ev_id[1], "")
+            ):
+                # Dawniej przedmiot zastepstwa powtarzal tytul (lub byl pusty): ten sam wpis.
                 self._seen_schedule_ids.add(ev_id)
                 continue
             if ev_id not in self._seen_schedule_ids:

@@ -38,16 +38,18 @@ def test_brak_danych():
     assert _szczegoly_zdarzenia({}) == {}
 
 
-def test_przedmiot_bez_powtorzonego_tytulu():
+def test_przedmiot_zastepstwa_z_tytulu_a_reszta_bez_zmian():
     tytul = "Zastępstwo z Nowak Jan na lekcji nr: 4 (wychowanie fizyczne)"
-    assert _przedmiot_zdarzenia(tytul, tytul) == ""
+    assert _przedmiot_zdarzenia(tytul, tytul) == "wychowanie fizyczne"
+    assert _przedmiot_zdarzenia(tytul.replace("nr: 4", "nr 4"), tytul.replace("nr: 4", "nr 4")) == "wychowanie fizyczne"
+    # dni wolne: nazwa swieta w przedmiocie zostaje
+    assert _przedmiot_zdarzenia("Przerwa swiateczna: SP", "Przerwa swiateczna: SP") == "Przerwa swiateczna: SP"
     assert _przedmiot_zdarzenia("Fizyka", "sprawdzian") == "Fizyka"
-    assert _przedmiot_zdarzenia("Odwołane zajęcia ", "Kowalska Anna na lekcji nr: 6") == "Odwołane zajęcia"
     assert _przedmiot_zdarzenia(None, None) == ""
 
 
-async def test_zastepstwo_bez_przedmiotu_nadal_trafia_na_lekcje_z_numeru(hass):
-    """Pusty `przedmiot` zastepstwa nie psuje dopasowania do planu (nazwa jest w tytule)."""
+async def test_zastepstwo_trafia_na_lekcje_z_numeru(hass):
+    """Zastepstwo z przedmiotem wyciagnietym z tytulu dopasowuje sie do lekcji w planie."""
     plan = [{"dzien_tygodnia": "Środa", "data": "2026-10-21", "lekcje": [
         dict(_lekcja(1, "08:00", "08:45"), przedmiot="Język polski", data="2026-10-21"),
         dict(_lekcja(2, "08:55", "09:40"), przedmiot="Biologia", data="2026-10-21"),
@@ -55,7 +57,7 @@ async def test_zastepstwo_bez_przedmiotu_nadal_trafia_na_lekcje_z_numeru(hass):
     ]}]
     tytul = "Zastępstwo z Nowak Jan na lekcji nr: 2 (Biologia)"
     terminarz = [{"data": "2026-10-21", "tydzien": "Środa", "tytul": tytul, "rodzaj": "zastepstwo",
-                  "przedmiot": "", "godzina": "unknown", "numer_lekcji": 2, "szczegoly": {}, "href": ""}]
+                  "przedmiot": "Biologia", "godzina": "unknown", "numer_lekcji": 2, "szczegoly": {}, "href": ""}]
     data = await LibrusDataUpdateCoordinator(hass, _klient_planu(plan, terminarz))._async_update_data()
     lekcje = data["plan_lekcji"][0]["lekcje"]
     assert [l["numer"] for l in lekcje] == [1, 2, 3]
@@ -87,7 +89,7 @@ async def test_terminarz_z_prawdziwym_parserem_biblioteki():
 
     zast = next(w for w in wpisy if w["rodzaj"] == "zastepstwo")
     assert zast["tytul"] == "Zastępstwo z Nowak Jan na lekcji nr: 4 (wychowanie fizyczne)"
-    assert zast["przedmiot"] == ""
+    assert zast["przedmiot"] == "wychowanie fizyczne"
     assert zast["numer_lekcji"] == 4
     assert zast["szczegoly"] == {}
 
@@ -97,7 +99,7 @@ async def test_terminarz_z_prawdziwym_parserem_biblioteki():
 
 
 def test_wpis_z_dawnym_przedmiotem_nie_jest_nowym_zdarzeniem():
-    """Po aktualizacji (przedmiot == tytul -> pusty) znane wpisy nie wysylaja ponownie zdarzenia."""
+    """Po aktualizacji klucz zastepstwa sie zmienia: znane wpisy nie wysylaja zdarzenia ponownie."""
     from unittest.mock import MagicMock
 
     client = MagicMock(spec=LibrusApiClient)
@@ -105,10 +107,16 @@ def test_wpis_z_dawnym_przedmiotem_nie_jest_nowym_zdarzeniem():
     client.options = {}
     coord = LibrusDataUpdateCoordinator(MagicMock(), client)
     coord.hass = MagicMock()
+    t1 = "Zastępstwo z Nowak Jan na lekcji nr: 4 (wychowanie fizyczne)"
+    t2 = "Zastępstwo z Nowak Jan na lekcji nr: 5 (Biologia)"
+    coord._seen_schedule_ids.add(("2026-12-23", t1, t1))  # przedmiot == tytul
+    coord._seen_schedule_ids.add(("2026-12-23", t2, ""))  # wersja z pustym przedmiotem
     coord._seen_schedule_ids.add(("2026-12-24", "Przerwa swiateczna: SP", "Przerwa swiateczna: SP"))
 
     wpisy = [
-        {"data": "2026-12-24", "tytul": "Przerwa swiateczna: SP", "przedmiot": "", "godzina": "unknown"},
+        {"data": "2026-12-23", "tytul": t1, "przedmiot": "wychowanie fizyczne", "godzina": "unknown"},
+        {"data": "2026-12-23", "tytul": t2, "przedmiot": "Biologia", "godzina": "unknown"},
+        {"data": "2026-12-24", "tytul": "Przerwa swiateczna: SP", "przedmiot": "Przerwa swiateczna: SP", "godzina": "unknown"},
         {"data": "2026-12-25", "tytul": "Nowy wpis", "przedmiot": "", "godzina": "unknown"},
     ]
     coord._fire_schedule_events(wpisy, "Jan")
