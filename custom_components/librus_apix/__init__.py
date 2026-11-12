@@ -100,6 +100,52 @@ def _rodzaj_zdarzenia(tytul: str, href: str) -> str:
     return "wydarzenie"
 
 
+# Klucze opisu wpisu terminarza. Gdy biblioteka nie ma dla nich tresci, wpisuje
+# "unknown" (domyslny tytul: "Nauczyciel: unknown<br />Opis: unknown").
+_KLUCZE_SZCZEGOLOW = ("Data dodania", "Nauczyciel", "Przedmiot", "Kategoria", "Opis")
+
+
+def _szczegoly_zdarzenia(data: dict | None) -> dict[str, str]:
+    """Zbuduj slownik `szczegoly` wpisu terminarza z danych biblioteki.
+
+    - znany klucz bez tresci ("unknown") jest pomijany, zamiast skleic go
+      z nazwa kolejnego klucza ("unknown\nOpis"),
+    - linia bez dwukropka w opisie (biblioteka daje jej "unknown") dopisuje sie
+      do poprzedniej wartosci,
+    - kolejne linie "klucz: wartosc" wewnatrz opisu dopisuja sie do `Opis`.
+    """
+    szczegoly: dict[str, str] = {}
+    last_key = None
+    for k, v in (data or {}).items():
+        if k in _KLUCZE_SZCZEGOLOW and str(v).strip().lower() == "unknown":
+            last_key = None
+        elif v == "unknown" and last_key:
+            szczegoly[last_key] += f"\n{k}"
+        elif last_key == "Opis" and k not in _KLUCZE_SZCZEGOLOW:
+            szczegoly[last_key] += f"\n{k}: {v}"
+        else:
+            szczegoly[k] = v
+            last_key = k
+    return szczegoly
+
+
+_ZASTEPSTWO_PRZEDMIOT = re.compile(r"na lekcji nr:?\s*\d+\s*\((.+)\)\s*$", re.IGNORECASE)
+
+
+def _przedmiot_zdarzenia(przedmiot: str | None, tytul: str | None) -> str:
+    """Przedmiot wpisu terminarza.
+
+    Zastepstwa nie maja osobnego przedmiotu (biblioteka powtarza tytul), wiec
+    bierzemy nazwe z konca tytulu: "... na lekcji nr: 4 (wychowanie fizyczne)".
+    Pozostale wpisy (np. dni wolne) zostaja bez zmian.
+    """
+    przedmiot = (przedmiot or "").strip()
+    tytul = (tytul or "").strip()
+    if przedmiot == tytul and (m := _ZASTEPSTWO_PRZEDMIOT.search(tytul)):
+        return m.group(1).strip()
+    return przedmiot
+
+
 def nowy_klient() -> Client:
     """Nowy klient librus-apix z własnym tokenem i słoikiem ciasteczek.
 
@@ -1120,23 +1166,14 @@ class LibrusApiClient:
                                 continue
                             dni = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
                             for ev in day_events:
-                                szczegoly = {}
-                                last_key = None
-                                for k, v in (ev.data or {}).items():
-                                    if v == "unknown" and last_key:
-                                        szczegoly[last_key] += f"\n{k}"
-                                    elif last_key == "Opis" and k not in ("Data dodania", "Nauczyciel", "Przedmiot", "Kategoria"):
-                                        szczegoly[last_key] += f"\n{k}: {v}"
-                                    else:
-                                        szczegoly[k] = v
-                                        last_key = k
+                                szczegoly = _szczegoly_zdarzenia(ev.data)
 
                                 events.append({
                                     "data": event_date.strftime("%Y-%m-%d"),
                                     "tydzien": dni[event_date.weekday()],
                                     "tytul": ev.title,
                                     "rodzaj": _rodzaj_zdarzenia(ev.title, ev.href),
-                                    "przedmiot": ev.subject,
+                                    "przedmiot": _przedmiot_zdarzenia(ev.subject, ev.title),
                                     "godzina": ev.hour,
                                     "numer_lekcji": ev.number,
                                     "szczegoly": szczegoly,

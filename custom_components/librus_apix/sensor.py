@@ -926,6 +926,12 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
         """Wyslij zdarzenia HA dla nowych zdarzen w kalendarzu."""
         for zdarzenie in terminarz:
             ev_id = (zdarzenie["data"], zdarzenie["tytul"], zdarzenie["przedmiot"])
+            if ev_id[2] != ev_id[1] and any(
+                (ev_id[0], ev_id[1], stary) in self._seen_schedule_ids for stary in (ev_id[1], "")
+            ):
+                # Dawniej przedmiot zastepstwa powtarzal tytul (lub byl pusty): ten sam wpis.
+                self._seen_schedule_ids.add(ev_id)
+                continue
             if ev_id not in self._seen_schedule_ids:
                 self._seen_schedule_ids.add(ev_id)
                 _LOGGER.debug("Nowe zdarzenie: %s %s %s", zdarzenie["data"], zdarzenie["przedmiot"], zdarzenie["tytul"])
