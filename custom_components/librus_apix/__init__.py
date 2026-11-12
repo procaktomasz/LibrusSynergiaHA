@@ -232,13 +232,23 @@ def _opis_oceny(desc: str) -> str:
     return " · ".join(x for x in opis if x)
 
 
+def _flaga_sredniej(desc: str) -> str:
+    """Wartosc "Licz do sredniej" z opisu oceny: "tak", "nie" albo "" (brak informacji).
+
+    Bez granicy slowa: przy tytulach z <br/> biblioteka skleja linie
+    ("Licz do sredniej: takWaga: 1").
+    """
+    m = re.search(r"Licz do średniej:\s*(tak|nie)", desc or "", re.IGNORECASE)
+    return m.group(1).lower() if m else ""
+
+
 def _liczona_z_opisu(desc: str) -> bool:
     """Czy ocena liczy sie do sredniej.
 
     False tylko przy jawnym "Licz do sredniej: nie" w opisie - biblioteka zwraca
     counts=False takze wtedy, gdy tej informacji w opisie w ogole nie ma.
     """
-    return not re.search(r"Licz do średniej:\s*nie\b", desc or "", re.IGNORECASE)
+    return _flaga_sredniej(desc) != "nie"
 
 
 def _poprawa_z_opisu(desc: str) -> str:
@@ -310,6 +320,7 @@ def _parse_point_grades(html) -> list:
                     "counts": attrs.get("Licz do wyniku", "").upper() == "TAK",
                     # Niewliczana tylko przy jawnym "NIE"
                     "liczona": attrs.get("Licz do wyniku", "").strip().upper() != "NIE",
+                    "flaga_sredniej": {"TAK": "tak", "NIE": "nie"}.get(attrs.get("Licz do wyniku", "").strip().upper(), ""),
                     "waga": None,
                     "poprawa_oceny": "",
                 })
@@ -890,6 +901,7 @@ class LibrusApiClient:
                                 'opis': _opis_oceny(getattr(grade, 'desc', '')),
                                 'type': 'numeric',
                                 'liczona': _liczona_z_opisu(getattr(grade, 'desc', '')),
+                                'flaga_sredniej': _flaga_sredniej(getattr(grade, 'desc', '')),
                                 'waga': getattr(grade, 'weight', None),
                                 'poprawa_oceny': _poprawa_z_opisu(getattr(grade, 'desc', '')),
                             })
@@ -956,6 +968,7 @@ class LibrusApiClient:
                                     'opis': _opis_oceny(desc_text) or parsed_content,
                                     'type': 'descriptive',
                                     'liczona': _liczona_z_opisu(desc_text),
+                                    'flaga_sredniej': _flaga_sredniej(desc_text),
                                     'waga': getattr(desc_grade, 'weight', None),
                                     'poprawa_oceny': _poprawa_z_opisu(desc_text),
                                 })

@@ -134,10 +134,12 @@ def _koordynator(hass, grades, pokazuj=None):
     return LibrusDataUpdateCoordinator(hass, client)
 
 
-def _g(ocena, liczona=True, data="2026-10-24", poprawa=""):
-    return {"subject": "język angielski", "grade": ocena, "date": data, "category": "Kartkówka",
+def _g(ocena, liczona=True, data="2026-10-24", poprawa="", flaga=None, przedmiot="język angielski"):
+    """Ocena jak z async_get_grades; flaga_sredniej domyślnie zgodna z `liczona` ("tak"/"nie")."""
+    return {"subject": przedmiot, "grade": ocena, "date": data, "category": "Kartkówka",
             "teacher": "Czarnecka Karolina", "semester": 1, "komentarz": "", "opis": "", "type": "numeric",
-            "liczona": liczona, "waga": 1, "poprawa_oceny": poprawa}
+            "liczona": liczona, "waga": 1, "poprawa_oceny": poprawa,
+            "flaga_sredniej": flaga if flaga is not None else ("tak" if liczona else "nie")}
 
 
 OCENY = [_g("2-", data="2026-10-01"), _g("2", liczona=False, data="2026-10-09"), _g("4", poprawa="2 (Poprawa)")]
@@ -266,6 +268,79 @@ async def test_brak_pobranych_ocen_uzywa_wszystkich_z_poprzedniego_stanu(hass):
     koord.data = {"oceny": [], "oceny_wszystkie": list(OCENY), "plan_lekcji": []}
     data = await koord._async_update_data()
     assert [o["ocena"] for o in data["oceny_wg_przedmiotu"]["język angielski"]] == ["2-", "2*", "4"]
+
+
+# --- #55 / #58: flaga "Licz do średniej" tylko w przedmiotach, które jej używają ---
+
+
+@pytest.mark.parametrize("linia,flaga,liczona", [
+    ("Licz do średniej: tak\n", "tak", True),
+    ("Licz do średniej: nie\n", "nie", False),
+    ("", "", True),
+    # Tytuł z <br/>: biblioteka skleja linie bez znaku nowej linii
+    ("Licz do średniej: takWaga: 1\n", "tak", True),
+    ("Licz do średniej: nieWaga: 0\n", "nie", False),
+])
+async def test_flaga_sredniej_z_opisu(linia, flaga, liczona):
+    (ocena,) = await _oceny_z_biblioteki([_ocena("5", linia)])
+    assert ocena["flaga_sredniej"] == flaga
+    assert ocena["liczona"] is liczona
+
+
+async def test_58_przedmiot_bez_ocen_tak_pokazuje_wszystkie(hass):
+    """#58: wszystkie oceny z angielskiego mają "Licz do średniej: nie" - widoczne, bez "*", w średniej."""
+    oceny = [_g("6", liczona=False, data=f"2026-09-2{i}") for i in range(5)] + [
+        _g("5", flaga="", przedmiot="Edukacja matematyczna"),
+    ]
+    data = await _koordynator(hass, oceny)._async_update_data()
+    angielski = data["oceny_wg_przedmiotu"]["język angielski"]
+    assert [o["ocena"] for o in angielski] == ["6"] * 5
+    assert all(o["liczona"] for o in angielski)
+    assert _srednia_ocen(angielski) == 6.0
+    assert len(data["oceny"]) == 6
+
+
+async def test_55_ocena_nie_obok_wpisu_bez_flagi(hass):
+    """#55: WF z oceną "5" ("nie") i wpisem "-" bez flagi - przedmiot nie używa flagi, oba widoczne."""
+    oceny = [_g("5", liczona=False, przedmiot="WYCHOWANIE FIZYCZNE"),
+             _g("-", flaga="", przedmiot="WYCHOWANIE FIZYCZNE", data="2026-10-28")]
+    data = await _koordynator(hass, oceny)._async_update_data()
+    wf = data["oceny_wg_przedmiotu"]["WYCHOWANIE FIZYCZNE"]
+    assert [o["ocena"] for o in wf] == ["5", "-"]
+    assert wf[0]["liczona"] is True
+
+
+async def test_flaga_dziala_niezaleznie_w_kazdym_przedmiocie(hass):
+    """Angielski używa flagi (poprawiona "2" ukryta), historia nie (ocena "nie" widoczna)."""
+    oceny = list(OCENY) + [_g("3", liczona=False, przedmiot="historia")]
+    data = await _koordynator(hass, oceny)._async_update_data()
+    assert [o["ocena"] for o in data["oceny_wg_przedmiotu"]["język angielski"]] == ["2-", "4"]
+    assert [o["ocena"] for o in data["oceny_wg_przedmiotu"]["historia"]] == ["3"]
+
+
+async def test_cache_z_305_bez_flagi_pokazuje_oceny(hass):
+    """Cache z 3.0.5 (liczona: false, bez flaga_sredniej) - oceny widoczne do najbliższego pobrania."""
+    stare = [{k: v for k, v in g.items() if k != "flaga_sredniej"} for g in OCENY]
+    koord = _koordynator(hass, [], pokazuj=False)
+    koord.store = MagicMock()
+    koord.store.async_load = AsyncMock(return_value={"plan_lekcji": [], "oceny": [], "oceny_wszystkie": stare,
+                                                     "oceny_wg_przedmiotu": {}, "student_info": None})
+    koord.meta_store = MagicMock()
+    koord.meta_store.async_load = AsyncMock(return_value=None)
+    dane = await koord.async_load_cached_data()
+    assert [o["ocena"] for o in dane["oceny_wg_przedmiotu"]["język angielski"]] == ["2-", "2", "4"]
+
+
+def test_flaga_oceny_punktowej():
+    html = _strona(
+        '<tr class="line0"><td class="center micro screen-only"><img id="przedmioty_OP_1_node"></td>'
+        "<td>Fizyka</td><td>"
+        + _a("Kartkówka (0-100)", "2026-10-19 (pn.)", 1, "99").replace("Licz do wyniku: TAK", "Licz do wyniku: NIE")
+        + _a("Test (0-100)", "2026-10-20 (wt.)", 2, "100")
+        + '</td><td class="center"> - </td><td>Brak ocen</td><td> - </td><td> - </td></tr>'
+    )
+    p99, p100 = _parse_point_grades(html)
+    assert (p99["flaga_sredniej"], p100["flaga_sredniej"]) == ("nie", "tak")
 
 
 # --- Opcja w ustawieniach ---

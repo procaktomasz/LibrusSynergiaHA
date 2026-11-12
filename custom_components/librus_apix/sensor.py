@@ -388,12 +388,21 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
 
         Oceny niewliczane do sredniej (np. poprawione) sa domyslnie ukryte, jak
         w aplikacji Librusa; po wlaczeniu opcji widoczne z dopiskiem "*".
+
+        Flaga "Licz do sredniej" dziala tylko w przedmiocie, w ktorym choc jedna
+        ocena ma "tak" (#55, #58): czesc szkol oznacza "nie" zwykle oceny (np. klasy
+        1-3) - wtedy wszystkie oceny przedmiotu sa liczone i widoczne.
         """
         pokazuj = bool(self.client.options.get(CONF_POKAZUJ_NIELICZONE, False))
-        widoczne = [g for g in wszystkie if pokazuj or g.get("liczona", True) is not False]
+        z_flaga = {g.get("subject") for g in wszystkie if g.get("flaga_sredniej") == "tak"}
+        widoczne = []
+        for g in wszystkie:
+            liczona = g.get("subject") not in z_flaga or g.get("liczona", True) is not False
+            if liczona or pokazuj:
+                widoczne.append(dict(g, liczona=liczona))
         oceny_wg_przedmiotu: Dict[str, List[Dict]] = {}
         for grade in widoczne:
-            liczona = grade.get("liczona", True) is not False
+            liczona = grade["liczona"]
             ocena = {
                 "ocena": grade["grade"] if liczona else f"{grade['grade']}*",
                 "data": grade["date"],
