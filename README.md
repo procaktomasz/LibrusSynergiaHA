@@ -822,6 +822,10 @@ MIT License - patrz [LICENSE](LICENSE)
 
 ## 📝 Historia Zmian
 
+### v3.0.6
+- ✏️ **Naprawa znikających ocen po aktualizacji do 3.0.5 (Issue #55, #58)**: W części szkół Librus oznacza wszystkie oceny z przedmiotu jako „Licz do średniej: nie”, przez co wersja 3.0.5 je ukrywała. Flaga jest teraz brana pod uwagę tylko w przedmiocie, w którym przynajmniej jedna ocena ma „Licz do średniej: tak”. W pozostałych przedmiotach wszystkie oceny są widoczne i liczone do średniej, tak jak przed 3.0.5.
+- 📅 **Czytelniejszy terminarz (Issue #53, PR #54 – dzięki @morbiasz)**: Szczegóły wydarzeń nie zawierają już „Nauczyciel: unknown”, a zastępstwa mają w atrybucie `przedmiot` nazwę przedmiotu zamiast powtórzonego tytułu.
+
 ### v3.0.5
 - 🧮 **Poprawne średnie przy wynikach procentowych (Issue #52)**: Wyniki procentowe i punktowe (np. `68`, `95%`, `85/100`) nie są już mieszane z ocenami w skali 1–6 – jeśli przedmiot ma oceny 1–6, średnia liczona jest tylko z nich. Przedmioty z samymi wynikami procentowymi zachowują średnią z procentów, jak dotąd. Nowy atrybut `srednia_procent` pokazuje średnią z wyników procentowych przedmiotu.
 - ✏️ **Oceny niewliczane do średniej (np. poprawione)**: Oceny oznaczone w Librusie jako „Licz do średniej: nie” nie wpływają już na średnie i – tak jak w aplikacji mobilnej Librusa – są domyślnie ukryte. Nowa opcja **„Pokazuj oceny niewliczane do średniej”** pokazuje je z oznaczeniem `*` (np. `2-, 2*, 4`). Zmiana opcji działa od razu, bez ponownego pobierania danych z Librusa.
