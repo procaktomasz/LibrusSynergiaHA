@@ -34,6 +34,7 @@ import librus_apix.messages  # noqa: F401
 import librus_apix.schedule  # noqa: F401
 import librus_apix.student_information  # noqa: F401
 import librus_apix.timetable  # noqa: F401
+from . import plan_lekcji  # noqa: F401
 
 from .const import DOMAIN, is_exam_event
 from .sensor import LibrusDataUpdateCoordinator
@@ -1351,7 +1352,7 @@ class LibrusApiClient:
                         return None
                 client = self._client
 
-                from librus_apix.timetable import get_timetable
+                from .plan_lekcji import get_timetable
                 from datetime import date as _date, datetime, timedelta
 
                 today = _date.today()
@@ -1405,7 +1406,12 @@ class LibrusApiClient:
                             if period.info:
                                 for info_key, info_val in period.info.items():
                                     k_low = info_key.lower()
-                                    if k_low in ("o", "n", "p") or "odwołane" in k_low or "okienko" in k_low or "zajęcia odwołane" in k_low or "przesunię" in k_low or "nieobecność" in k_low:
+                                    # Przesunięcie odwołuje lekcję tylko we wpisie przekreślonym
+                                    # (przeniesionej stąd); przeniesiona tutaj się odbywa (#59).
+                                    przesuniecie = k_low == "p" or "przesunię" in k_low
+                                    if k_low in ("o", "n") or "odwołane" in k_low or "okienko" in k_low or "zajęcia odwołane" in k_low or "nieobecność" in k_low:
+                                        odwolana = True
+                                    if przesuniecie and getattr(period, "skreslony", True):
                                         odwolana = True
                                     if k_low == "z" or "zastępstwo" in k_low:
                                         zastepstwo = True

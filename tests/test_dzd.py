@@ -88,7 +88,7 @@ async def _today_after_merge(payload):
     """Uruchom async_get_timetable z zamockowanym planem i podaną odpowiedzią
     gateway; zwróć dzień „dziś" (pierwszy zwracany) po scaleniu DZD."""
     client = _client_with_gateway(payload)
-    with patch("librus_apix.timetable.get_timetable", return_value=_fake_week()):
+    with patch("custom_components.librus_apix.plan_lekcji.get_timetable", return_value=_fake_week()):
         result = await client.async_get_timetable()
     today = date.today().strftime("%Y-%m-%d")
     return next(d for d in result if d["data"] == today)
