@@ -822,6 +822,9 @@ MIT License - patrz [LICENSE](LICENSE)
 
 ## 📝 Historia Zmian
 
+### v3.0.7
+- 👩‍🏫 **Nazwiska dwuczłonowe w zastępstwach (Issue #62)**: Przy zastępstwie lub zmianie w planie lekcji nauczyciel z nazwiskiem z łącznikiem (np. „Węgrzyn-Woźniak”) nie jest już rozdzielany – druga część nazwiska nie trafia do sali. Sala zapisana jako „s. 12” nie jest też pokazywana jako zmiana sali, gdy się nie zmieniła.
+
 ### v3.0.6
 - ✏️ **Naprawa znikających ocen po aktualizacji do 3.0.5 (Issue #55, #58)**: W części szkół Librus oznacza wszystkie oceny z przedmiotu jako „Licz do średniej: nie”, przez co wersja 3.0.5 je ukrywała. Flaga jest teraz brana pod uwagę tylko w przedmiocie, w którym przynajmniej jedna ocena ma „Licz do średniej: tak”. W pozostałych przedmiotach wszystkie oceny są widoczne i liczone do średniej, tak jak przed 3.0.5.
 - 📅 **Czytelniejszy terminarz (Issue #53, PR #54 – dzięki @morbiasz)**: Szczegóły wydarzeń nie zawierają już „Nauczyciel: unknown”, a zastępstwa mają w atrybucie `przedmiot` nazwę przedmiotu zamiast powtórzonego tytułu.
