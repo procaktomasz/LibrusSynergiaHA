@@ -232,6 +232,29 @@ def _opis_oceny(desc: str) -> str:
     return " · ".join(x for x in opis if x)
 
 
+def _rozdziel_nauczyciela_i_sale(tekst: str) -> tuple[str, str]:
+    """Nauczyciel i sala z tekstu planu ("Kowalski Jan s. 12", "Kowalski Jan - 5").
+
+    Sala jest oddzielana tylko po " s. ", " sala " albo " - " (ze spacjami),
+    więc nazwisko z łącznikiem ("Węgrzyn-Woźniak") zostaje w całości (#62).
+    """
+    tekst = (tekst or "").strip()
+    t_low = tekst.lower()
+    for sep in (" s. ", " sala "):
+        if sep in t_low:
+            idx = t_low.rfind(sep)
+            return tekst[:idx].strip(), tekst[idx + 1:].strip()
+    if " - " in tekst:
+        nauczyciel, sala = tekst.rsplit(" - ", 1)
+        return nauczyciel.strip(), sala.strip()
+    return tekst, ""
+
+
+def _numer_sali(sala: str) -> str:
+    """Sala bez przedrostka "s." / "sala" - do porównania z opisem zmiany."""
+    return re.sub(r"^(s\.|sala)\s*", "", sala or "", flags=re.IGNORECASE).strip()
+
+
 def _flaga_sredniej(desc: str) -> str:
     """Wartosc "Licz do sredniej" z opisu oceny: "tak", "nie" albo "" (brak informacji).
 
@@ -1402,6 +1425,7 @@ class LibrusApiClient:
 
                             odwolana = False
                             zastepstwo = False
+                            po_zmianie = None
                             if period.info:
                                 for info_key, info_val in period.info.items():
                                     k_low = info_key.lower()
@@ -1422,10 +1446,8 @@ class LibrusApiClient:
                                         teacher_swap = info_val.get("teacher_swap", "").strip()
                                         classroom_swap = info_val.get("classroom_swap", "").strip()
                                         
-                                        tc_parts = teacher_and_classroom.rsplit("-", 1)
-                                        curr_teacher = tc_parts[0].strip()
-                                        curr_room = tc_parts[1].strip() if len(tc_parts) > 1 else ""
-                                        
+                                        curr_teacher, curr_room = _rozdziel_nauczyciela_i_sale(teacher_and_classroom)
+
                                         new_teacher = curr_teacher
                                         if teacher_swap:
                                             old_teacher = teacher_swap.split("->")[0].strip() if "->" in teacher_swap else teacher_swap
@@ -1435,7 +1457,7 @@ class LibrusApiClient:
                                         new_room = curr_room
                                         if classroom_swap:
                                             old_room = classroom_swap.split("->")[0].strip() if "->" in classroom_swap else classroom_swap
-                                            if old_room and old_room != curr_room:
+                                            if old_room and old_room != _numer_sali(curr_room):
                                                 if not curr_room or curr_room == "[brak]":
                                                     new_room = f"({old_room} ➔ brak)"
                                                 else:
@@ -1447,23 +1469,14 @@ class LibrusApiClient:
                                             teacher_and_classroom = new_teacher
                                         elif new_room:
                                             teacher_and_classroom = f"Sala {new_room}"
+                                        # Bez ponownego dzielenia złożonego tekstu (#62)
+                                        po_zmianie = (new_teacher, new_room)
                                         break
 
-                            nauczyciel = teacher_and_classroom
-                            sala = ""
-                            tc_lower = teacher_and_classroom.lower()
-                            if " s. " in tc_lower:
-                                idx = tc_lower.rfind(" s. ")
-                                nauczyciel = teacher_and_classroom[:idx].strip()
-                                sala = teacher_and_classroom[idx + 1:].strip()
-                            elif " sala " in tc_lower:
-                                idx = tc_lower.rfind(" sala ")
-                                nauczyciel = teacher_and_classroom[:idx].strip()
-                                sala = teacher_and_classroom[idx + 1:].strip()
-                            elif " - " in teacher_and_classroom:
-                                parts = teacher_and_classroom.rsplit(" - ", 1)
-                                nauczyciel = parts[0].strip()
-                                sala = parts[1].strip()
+                            if po_zmianie is not None:
+                                nauczyciel, sala = po_zmianie
+                            else:
+                                nauczyciel, sala = _rozdziel_nauczyciela_i_sale(teacher_and_classroom)
 
                             lekcja_dict = {
                                 "przedmiot": subject,
