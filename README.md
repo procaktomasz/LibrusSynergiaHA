@@ -90,6 +90,7 @@ Integracja tworzy następujące sensory i encje:
 | `sensor.librus_[uczen]_frekwencja` | Lista nieobecności i spóźnień, rozbicie na usprawiedliwione / nieusprawiedliwione / zwolnienia oraz **frekwencja w %** | liczba nieobecności |
 | `sensor.librus_[uczen]_tematy_lekcji` | **Tematy zrealizowanych lekcji** z ostatnich 7 dni wraz z wpisem frekwencji i zastępcami | liczba lekcji dzisiaj |
 | `sensor.librus_[uczen]_terminarz` | Nadchodzące wpisy terminarza (sprawdziany, kartkówki, wydarzenia) | liczba wpisów |
+| `sensor.librus_[uczen]_zadania_od_nauczycieli` | Zadania od nauczycieli (moduł widoczny na koncie ucznia, na koncie rodzica zwykle pusty): przedmiot, temat, treść, termin, czy przeczytane / zrobione, liczba plików; lista tylko z terminem z ostatnich 21 dni i przyszłym | zadania do zrobienia (termin od dziś) |
 | `sensor.librus_[uczen]_ogloszenia` | Najnowsze ogłoszenia ze szkolnej tablicy | liczba ogłoszeń |
 | `sensor.librus_[uczen]_podsumowanie_ai_rodzic` | (NOWOŚĆ) Raport tygodniowy AI dla rodzica | skrót do 250 znaków (pełny raport w atrybucie `pełny_tekst`) |
 | `sensor.librus_[uczen]_podsumowanie_ai_uczen` | (NOWOŚĆ) Raport motywujący AI dla ucznia | skrót do 250 znaków (pełny raport w atrybucie `pełny_tekst`) |
@@ -703,6 +704,23 @@ automation:
         data:
           title: "📚 {{ trigger.event.data.uczen }}: nowe zadanie"
           message: "{{ trigger.event.data.przedmiot }} ({{ trigger.event.data.kategoria }}), termin: {{ trigger.event.data.termin }}"
+```
+
+#### 🧑‍🏫 Powiadomienie o nowym zadaniu od nauczyciela
+Zdarzenie: `librus_apix_nowe_zadanie_od_nauczyciela` (konto ucznia; po aktualizacji integracji pierwsze pobranie tylko zapamiętuje stan, bez powiadomień o starszych zadaniach)  
+Dostępne dane: `uczen`, `przedmiot`, `temat`, `kategoria`, `termin`, `nauczyciel`, `pliki`
+
+```yaml
+automation:
+  - alias: "Librus - Zadanie od nauczyciela"
+    trigger:
+      - platform: event
+        event_type: librus_apix_nowe_zadanie_od_nauczyciela
+    action:
+      - service: notify.mobile_app_NAZWA_TWOJEGO_TELEFONU
+        data:
+          title: "🧑‍🏫 {{ trigger.event.data.uczen }}: {{ trigger.event.data.temat }}"
+          message: "{{ trigger.event.data.przedmiot }}, termin {{ trigger.event.data.termin }}"
 ```
 
 #### 📅 Powiadomienie o nowym wpisie w terminarzu (sprawdzian / wydarzenie)

@@ -228,6 +228,9 @@ async def async_setup_entry(
         entities.append(LibrusPrzedmiotSensor(coordinator, subject, config_entry))
         entities.append(LibrusSredniaPrzedmiotuSensor(coordinator, subject, config_entry))
 
+    # Zadania od nauczycieli (konto ucznia; na koncie rodzica zwykle puste)
+    entities.append(LibrusZadaniaNauczycielaSensor(coordinator, config_entry))
+
     # Czujnik globalnej sredniej
     entities.append(LibrusSredniaOcenSensor(coordinator, config_entry))
 
@@ -250,6 +253,7 @@ EVENT_NOWA_NIEOBECNOSC = f"{DOMAIN}_nowa_nieobecnosc"
 # Wpisy frekwencji oznaczajace obecnosc - nie wysylamy dla nich zdarzen
 _BEZ_ZDARZENIA = ("", "ob", "wy")
 EVENT_NOWA_UWAGA = f"{DOMAIN}_nowa_uwaga"
+EVENT_NOWE_ZADANIE_NAUCZYCIELA = f"{DOMAIN}_nowe_zadanie_od_nauczyciela"
 
 
 def _student_info_to_dict(info) -> Optional[Dict[str, Any]]:
@@ -308,6 +312,9 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
         self._seen_schedule_ids: set = set()
         self._seen_absence_ids: set = set()
         self._seen_note_ids: set = set()
+        # Zadania od nauczycieli: None = jeszcze nie zapamietano stanu, wtedy
+        # pierwsze pobranie tylko zapamietuje, bez zdarzen (takze po aktualizacji)
+        self._seen_assignment_ids: Optional[set] = None
         self._first_run: bool = True
         # Trwa awaria logowania (ostrzezenie w logu tylko raz na awarie)
         self._brak_logowania: bool = False
@@ -451,6 +458,10 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
         for uwaga in data.get("uwagi", []):
             if isinstance(uwaga, dict) and "id" in uwaga:
                 self._seen_note_ids.add(uwaga["id"])
+        if "zadania_nauczyciela" in data:
+            self._seen_assignment_ids = {
+                z["id"] for z in data["zadania_nauczyciela"] if isinstance(z, dict) and "id" in z
+            }
 
     async def _async_update_data(self) -> Dict[str, Any]:
         """Pobierz aktualne dane z API Librus."""
@@ -508,6 +519,14 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 tematy_raw = await self.client.async_get_completed_lessons()
                 frekwencja_stat_raw = await self.client.async_get_attendance_stats()
                 uwagi_raw = await self.client.async_get_notes()
+                zadania_nauczyciela_raw = None
+                zad_call = getattr(self.client, "async_get_teacher_assignments", None)
+                if callable(zad_call):
+                    wynik = zad_call()
+                    if asyncio.iscoroutine(wynik):
+                        zadania_nauczyciela_raw = await wynik
+                    elif isinstance(wynik, list):
+                        zadania_nauczyciela_raw = wynik
                 if hasattr(self.client, "async_get_behavior") and callable(self.client.async_get_behavior):
                     beh_call = self.client.async_get_behavior()
                     if asyncio.iscoroutine(beh_call):
@@ -790,6 +809,11 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 "frekwencja_stat": frekwencja_stat,
                 "semestr_biezacy": current_sem,
             }
+            result["zadania_nauczyciela"] = (
+                zadania_nauczyciela_raw
+                if zadania_nauczyciela_raw is not None
+                else prev.get("zadania_nauczyciela", [])
+            )
 
             try:
                 cache_copy = dict(result)
@@ -836,6 +860,10 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 self._fire_schedule_events(terminarz, uczen)
                 self._fire_absence_events(tematy_lekcji, uczen)
                 self._fire_note_events(uwagi, uczen)
+
+            if zadania_nauczyciela_raw is not None:
+                uczen = getattr(student_info, "name", "Nieznany uczeń") if student_info else "Nieznany uczeń"
+                self._fire_assignment_events(zadania_nauczyciela_raw, uczen)
 
             # Adaptacyjne odświeżanie (interwały z opcji integracji)
             self.update_interval = self._interwal_odpytywania(datetime.now())
@@ -954,6 +982,29 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                         "godzina": zdarzenie["godzina"],
                     },
                 )
+
+    def _fire_assignment_events(self, zadania: List[Dict], uczen: str) -> None:
+        """Wyslij zdarzenia HA dla nowych zadan od nauczycieli."""
+        if self._seen_assignment_ids is None:
+            self._seen_assignment_ids = {z["id"] for z in zadania}
+            return
+        for z in zadania:
+            if z["id"] in self._seen_assignment_ids:
+                continue
+            self._seen_assignment_ids.add(z["id"])
+            _LOGGER.debug("Nowe zadanie od nauczyciela: %s %s", z["przedmiot"], z["termin"])
+            self.hass.bus.async_fire(
+                EVENT_NOWE_ZADANIE_NAUCZYCIELA,
+                {
+                    "uczen": uczen,
+                    "przedmiot": z["przedmiot"],
+                    "temat": z["temat"],
+                    "kategoria": z["kategoria"],
+                    "termin": z["termin"],
+                    "nauczyciel": z["nauczyciel"],
+                    "pliki": z["pliki"],
+                },
+            )
 
     def _build_wiadomosci(self, messages: Optional[List[Dict]]) -> List[Dict]:
         """Oznacz nowe wiadomosci i zwroc liste."""
@@ -1396,6 +1447,58 @@ class LibrusWiadomosciSensor(CoordinatorEntity, SensorEntity):
             "wiadomosci": wiadomosci_list,
             "liczba_nieprzeczytanych": sum(1 for m in msgs if m.get("unread", False)),
             "sa_nowe_wiadomosci": any(m.get("jest_nowa", False) for m in msgs),
+        }
+
+
+# Ile dni wstecz (wg terminu) czujnik pokazuje zadania od nauczycieli
+ZADANIA_NAUCZYCIELA_DNI_WSTECZ = 21
+
+
+class LibrusZadaniaNauczycielaSensor(CoordinatorEntity, SensorEntity):
+    """Czujnik z zadaniami od nauczycieli widocznymi tylko na koncie ucznia."""
+
+    _unrecorded_attributes = frozenset({"zadania"})
+
+    def __init__(self, coordinator: LibrusDataUpdateCoordinator, config_entry: ConfigEntry) -> None:
+        """Inicjalizacja."""
+        super().__init__(coordinator)
+        self._config_entry = config_entry
+        self._attr_has_entity_name = False
+        self._attr_name = "Zadania od nauczycieli"
+        self._attr_unique_id = f"{config_entry.entry_id}_zadania_nauczyciela"
+        self._attr_icon = "mdi:clipboard-text-outline"
+
+    @property
+    def device_info(self) -> Dict[str, Any]:
+        return _device_info(self.coordinator, self._config_entry)
+
+    def _do_zrobienia(self) -> List[Dict]:
+        dzis = date.today().isoformat()
+        return [
+            z for z in (self.coordinator.data or {}).get("zadania_nauczyciela", [])
+            if not z.get("zrobione") and (z.get("termin") or "") >= dzis
+        ]
+
+    @property
+    def native_value(self) -> int:
+        """Liczba zadan z terminem od dzis, nieoznaczonych jako zrobione."""
+        return len(self._do_zrobienia())
+
+    @property
+    def extra_state_attributes(self) -> Dict[str, Any]:
+        # Tylko aktualne: termin od ZADANIA_NAUCZYCIELA_DNI_WSTECZ dni temu
+        # (np. materialy do przerobionej lektury nie zasmiecaja kart)
+        od = (date.today() - timedelta(days=ZADANIA_NAUCZYCIELA_DNI_WSTECZ)).isoformat()
+        wszystkie = (self.coordinator.data or {}).get("zadania_nauczyciela", [])
+        zadania = [z for z in wszystkie if (z.get("termin") or "") >= od]
+        do_zrobienia = self._do_zrobienia()
+        return {
+            "zadania": zadania,
+            "liczba_zadan": len(zadania),
+            "liczba_wszystkich": len(wszystkie),
+            "dni_wstecz": ZADANIA_NAUCZYCIELA_DNI_WSTECZ,
+            "najblizszy_termin": do_zrobienia[0]["termin"] if do_zrobienia else None,
+            "najblizsze": do_zrobienia[0] if do_zrobienia else None,
         }
 
 
