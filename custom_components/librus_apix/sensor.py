@@ -1373,6 +1373,8 @@ class LibrusWiadomosciSensor(CoordinatorEntity, SensorEntity):
                 "jest_nowa": m.get("jest_nowa", False),
                 "ma_zalacznik": m.get("has_attachment", False),
                 "tresc": m.get("content") or "",
+                # Odnosnik do akcji librus_apix.get_message (#63)
+                "href": str(m.get("href") or ""),
             }
             for m in msgs
         ]
@@ -1387,6 +1389,7 @@ class LibrusWiadomosciSensor(CoordinatorEntity, SensorEntity):
                 "jest_nowa": False,
                 "ma_zalacznik": False,
                 "tresc": "",
+                "href": "",
             })
 
         return {

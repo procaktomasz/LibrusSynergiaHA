@@ -1979,6 +1979,10 @@ async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:
     async def handle_get_message(call):
         """Obsluga wywolania pobierania wiadomosci."""
         url = call.data.get("url")
+        # Szablon z samym numerem wiadomosci HA zamienia na int (#63)
+        if url is not None and not isinstance(url, str):
+            url = str(url)
+        url = (url or "").strip()
         if not url:
             _LOGGER.error("Brak URL wiadomosci")
             return {"content": None, "error": "Brak URL wiadomosci"}
@@ -2012,7 +2016,7 @@ async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:
                     coord = getattr(entry_data, "coordinator", None)
                     if coord and getattr(coord, "data", None):
                         msgs = coord.data.get("wiadomosci", [])
-                        if any(isinstance(m, dict) and m.get("href") == url for m in msgs):
+                        if any(isinstance(m, dict) and str(m.get("href") or "") == url for m in msgs):
                             client = entry_data
                             break
 

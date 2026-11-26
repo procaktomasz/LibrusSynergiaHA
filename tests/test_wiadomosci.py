@@ -279,3 +279,50 @@ async def test_background_fetcher_session_lock_synchronization(hass):
 
 
 
+
+
+def test_63_atrybut_zawiera_href():
+    """Odnośnik wiadomości jest w atrybucie (do akcji get_message), także w dopełnieniu."""
+    coordinator = MagicMock()
+    coordinator.data = {"wiadomosci": [
+        {"author": "A", "title": "T", "date": "2026-11-20", "href": "4833629"},
+        {"author": "B", "title": "U", "date": "2026-11-21", "href": 4833630},
+    ]}
+    attrs = LibrusWiadomosciSensor(coordinator, MagicMock(entry_id="e1", options={})).extra_state_attributes
+    lista = attrs["wiadomosci"]
+    assert lista[0]["href"] == "4833629"
+    assert lista[1]["href"] == "4833630"
+    assert all(m["href"] == "" for m in lista[2:])
+    # Dotychczasowe klucze bez zmian
+    assert {"nadawca", "temat", "data", "nieprzeczytana", "jest_nowa", "ma_zalacznik", "tresc"} <= set(lista[0])
+
+
+@pytest.mark.asyncio
+async def test_63_get_message_z_liczbowym_url(hass):
+    """Szablon zwraca liczbę (HA zamienia "4833629" na int) - akcja i tak działa
+    i dobiera właściwe konto po odnośniku."""
+    from custom_components.librus_apix import async_setup
+    from custom_components.librus_apix.const import DOMAIN
+
+    def _klient(href):
+        c = MagicMock(spec=LibrusApiClient)
+        c._client = MagicMock()
+        c._token = "token"
+        c._message_cache = {}
+        c.coordinator = MagicMock()
+        c.coordinator.data = {"wiadomosci": [{"href": href}]}
+        return c
+
+    client_a, client_b = _klient("1111111"), _klient("4833629")
+    await async_setup(hass, {})
+    hass.data[DOMAIN]["entry_a"] = client_a
+    hass.data[DOMAIN]["entry_b"] = client_b
+
+    with patch("librus_apix.messages.message_content") as mock_mc:
+        mock_mc.return_value = SimpleNamespace(content="Treść")
+        response = await hass.services.async_call(
+            DOMAIN, "get_message", {"url": 4833629}, blocking=True, return_response=True,
+        )
+
+    assert response == {"content": "Treść"}
+    mock_mc.assert_called_once_with(client_b._client, "4833629")
