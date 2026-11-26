@@ -30,13 +30,27 @@ def _podpowiedz(wpis):
 
 
 def _info(lesson, wybrane) -> dict:
-    """Opis zmiany jak w bibliotece, ale z podpowiedzi wybranych wpisów."""
+    """Opis zmiany jak w bibliotece, ale z podpowiedzi wybranych wpisów.
+
+    Gdy przy żadnym wybranym wpisie nie ma podpowiedzi, a komórka ją ma
+    (inny układ HTML), opis bierze się z pierwszego `<a>`, jak w bibliotece.
+    """
     info = {}
     for wpis in wybrane:
-        a_href = _podpowiedz(wpis)
-        tooltip = a_href.select_one("div.center.plan-lekcji-info") if a_href is not None else None
-        if tooltip is None:
-            continue
+        _dodaj_opis(info, _podpowiedz(wpis))
+    if not info:
+        _dodaj_opis(info, lesson.select_one("a"))
+    # etykieta bez podpowiedzi (np. samo "odwołane") - jak w bibliotece
+    for tooltip in lesson.select("div.center.plan-lekcji-info"):
+        if tooltip.find_parent("a") is None:
+            info.setdefault(tooltip.text.strip(), "")
+    return info
+
+
+def _dodaj_opis(info: dict, a_href) -> None:
+    """Dopisz do `info` opis zmiany z podpowiedzi `<a>` (o ile ją zawiera)."""
+    tooltip = a_href.select_one("div.center.plan-lekcji-info") if a_href is not None else None
+    if tooltip is not None:
         attr_dict = {}
         for attr in (
             a_href.attrs.get("title", "")
@@ -54,11 +68,6 @@ def _info(lesson, wybrane) -> dict:
             "classroom_swap": attr_dict.get("Sala", ""),
             "date_added": attr_dict.get("Data dodania", ""),
         })
-    # etykieta bez podpowiedzi (np. samo "odwołane") - jak w bibliotece
-    for tooltip in lesson.select("div.center.plan-lekcji-info"):
-        if tooltip.find_parent("a") is None:
-            info.setdefault(tooltip.text.strip(), "")
-    return info
 
 
 def get_timetable(client, monday_date: datetime) -> List[List[Period]]:

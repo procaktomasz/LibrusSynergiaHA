@@ -65,7 +65,7 @@ def _tydzien(nauczyciel_i_sala, sala_swap="1 -> [brak]"):
 
 async def _lekcja_dzis(tydzien):
     client = _klient()
-    with patch("librus_apix.timetable.get_timetable", return_value=tydzien):
+    with patch("custom_components.librus_apix.plan_lekcji.get_timetable", return_value=tydzien):
         wynik = await client.async_get_timetable()
     dzis = next(d for d in wynik if d["data"] == date.today().strftime("%Y-%m-%d"))
     (lekcja,) = dzis["lekcje"]

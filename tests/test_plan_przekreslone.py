@@ -101,6 +101,38 @@ def test_tylko_przekreslony_wpis():
     assert "przesunięcie" in lekcja.info
 
 
+def _zastepstwo_title():
+    return (
+        "&lt;b&gt;Nauczyciel:&lt;/b&gt; Nauczyciel A -&gt; Nauczyciel F&lt;br&gt;"
+        "&lt;b&gt;Przedmiot:&lt;/b&gt; Matematyka&lt;br&gt;"
+        "&lt;b&gt;Sala:&lt;/b&gt; 110 -&gt; 12&lt;br&gt;"
+        "&lt;b&gt;Data dodania:&lt;/b&gt; 2026-11-20"
+    )
+
+
+# Samo zastępstwo: podpowiedź tuż przed wpisem.
+ZASTEPSTWO = (
+    f'<a href="javascript:void(0);" title="{_zastepstwo_title()}">'
+    '<div class="center plan-lekcji-info">zastępstwo</div></a>'
+    + _wpis("Matematyka", "Nauczyciel F")
+)
+# Zastępstwo z innym elementem między podpowiedzią a wpisem.
+ZASTEPSTWO_ODDZIELONE = (
+    f'<a href="javascript:void(0);" title="{_zastepstwo_title()}">'
+    '<div class="center plan-lekcji-info">zastępstwo</div></a><br/>'
+    + _wpis("Matematyka", "Nauczyciel F")
+)
+
+
+@pytest.mark.parametrize("komorka", [ZASTEPSTWO, ZASTEPSTWO_ODDZIELONE])
+def test_zastepstwo_zachowuje_opis_zmiany(komorka):
+    (lekcja,) = _poniedzialek(komorka)
+    assert lekcja.subject == "Matematyka"
+    assert lekcja.skreslony is False
+    assert lekcja.info["zastępstwo"]["teacher_swap"] == "Nauczyciel A -> Nauczyciel F"
+    assert lekcja.info["zastępstwo"]["classroom_swap"] == "110 -> 12"
+
+
 def test_grupy_i_pusta_komorka_jak_w_bibliotece():
     grupy, pusta = _poniedzialek(GRUPY, "")
     assert grupy.subject == "Język angielski / Informatyka"
