@@ -195,7 +195,7 @@ async def test_blad_inny_niz_token_bez_ponowienia():
 async def test_blad_planu_bez_ponowienia():
     """Blad w planie lekcji nie pobiera ponownie dwoch tygodni planu."""
     client = _zalogowany_klient()
-    with patch("librus_apix.timetable.get_timetable", side_effect=RuntimeError("zepsuty HTML")) as gt:
+    with patch("custom_components.librus_apix.plan_lekcji.get_timetable", side_effect=RuntimeError("zepsuty HTML")) as gt:
         assert await client.async_get_timetable() is None
     assert gt.call_count == 1
 

@@ -217,6 +217,7 @@ def test_moduly_biblioteki_zaladowane_przy_imporcie():
         "librus_apix.attendance", "librus_apix.announcements",
         "librus_apix.completed_lessons", "librus_apix.grades",
         "bs4", "soupsieve", "custom_components.librus_apix.sensor",
+        "custom_components.librus_apix.plan_lekcji",
     ):
         assert mod in sys.modules, mod
 
