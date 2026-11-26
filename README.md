@@ -759,7 +759,16 @@ action:
 Integracja udostępnia dedykowaną usługę `librus_apix.get_message` pozwalającą na pobranie pełnej treści pojedynczej wiadomości z Librusa na żądanie.
 
 * **Parametry usługi:**
-  * `url` (wymagany) – odnośnik (`href`) wiadomości, dostępny m.in. w atrybucie `wiadomosci` sensora `sensor.librus_[uczen]_wiadomosci`.
+  * `url` (wymagany) – odnośnik (`href`) wiadomości z atrybutu `wiadomosci` sensora `sensor.librus_[uczen]_wiadomosci`.
+  * `entity_id` (opcjonalny) – sensor wiadomości ucznia; przy kilku kontach wskazuje, z którego pobrać wiadomość.
+* **Przykład (skrypt lub automatyzacja):**
+  ```yaml
+  - action: librus_apix.get_message
+    data:
+      entity_id: sensor.librus_[uczen]_wiadomosci
+      url: "{{ state_attr('sensor.librus_[uczen]_wiadomosci', 'wiadomosci')[0].href }}"
+    response_variable: wynik
+  ```
 * **Działanie:** Pobiera treść wiadomości i emituje zdarzenie `librus_apix_message_read` z polami `url` oraz `content`.
 * *Uwaga:* Pobranie wiadomości za pomocą tej usługi oznacza ją jako przeczytaną w portalu Librus Synergia.
 
@@ -821,6 +830,10 @@ MIT License - patrz [LICENSE](LICENSE)
 ---
 
 ## 📝 Historia Zmian
+
+### v3.0.8
+- 🔀 **Przesunięte lekcje w planie (Issue #59, PR #61 – dzięki @gacek78)**: Gdy lekcje zamieniają się miejscami, plan pokazuje lekcję przeniesioną na daną godzinę, a nie przekreśloną, i nie oznacza jej jako odwołanej. Lekcja przeniesiona w inne miejsce bez zastępstwa pozostaje odwołana.
+- ✉️ **Akcja `get_message` z automatyzacji (Issue #63)**: Atrybut `wiadomosci` zawiera teraz odnośnik `href` każdej wiadomości, a akcja przyjmuje też numer wiadomości podany przez szablon jako liczbę.
 
 ### v3.0.7
 - 👩‍🏫 **Nazwiska dwuczłonowe w zastępstwach (Issue #62)**: Przy zastępstwie lub zmianie w planie lekcji nauczyciel z nazwiskiem z łącznikiem (np. „Węgrzyn-Woźniak”) nie jest już rozdzielany – druga część nazwiska nie trafia do sali. Sala zapisana jako „s. 12” nie jest też pokazywana jako zmiana sali, gdy się nie zmieniła.
