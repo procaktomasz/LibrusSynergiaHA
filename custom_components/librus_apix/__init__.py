@@ -658,6 +658,8 @@ class LibrusApiClient:
         self._auth_time = 0.0
         self._brak_dostepu: Dict[str, float] = {}
         self._brak_dostepu_zgloszone: set = set()
+        # Slowniki API dla zadan od nauczycieli (przedmioty, kategorie, osoby)
+        self._slowniki: Dict[str, Dict] = {}
 
     def _modul_niedostepny(self, modul: str) -> bool:
         """Czy modul jest pomijany po wczesniejszym "Brak dostepu" w Librusie."""
@@ -1896,7 +1898,126 @@ class LibrusApiClient:
             return None
 
 
+    async def async_get_teacher_assignments(self):
+        """Pobierz zadania od nauczycieli (HomeWorkAssignments, widoczne na koncie ucznia).
+
+        Best-effort: przy bledzie zwraca None (czujnik zostawi poprzednie dane).
+        """
+        if self._modul_niedostepny("zadania_nauczyciela"):
+            return None
+        try:
+            if not self._client or not self._token:
+                if not await self.async_authenticate():
+                    return None
+            client = self._client
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(
+                None, _fetch_teacher_assignments, client, self._slowniki
+            )
+        except PermissionError:
+            # Konto bez tego modulu (np. rodzica): pusta lista, ponowna proba za dobe
+            self._brak_dostepu["zadania_nauczyciela"] = time.monotonic() + self.BRAK_DOSTEPU_BLOKADA
+            _LOGGER.debug("Konto %s nie ma dostępu do zadań od nauczycieli", self.username)
+            return []
+        except TokenError:
+            if not self._obsluz_brak_dostepu("zadania_nauczyciela"):
+                self._reset_auth()
+            return None
+        except Exception as ex:
+            _LOGGER.warning("Zadania od nauczycieli: nie udało się pobrać: %s", ex)
+            return None
+
+
 _RODZAJ_UWAGI = {0: "negatywna", 1: "pozytywna", 2: "neutralna"}
+# Slowniki zadan od nauczycieli (lekcje, przedmioty, kategorie, osoby) pobieramy
+# jako listy i odswiezamy najwyzej co tyle sekund - nawet gdy brakuje w nich Id
+SLOWNIK_ODSWIEZANIE = 6 * 3600
+
+
+def _slownik(client, api: str, slowniki: dict, zasob: str, klucz_listy: str, wartosc, potrzebne: set) -> dict:
+    """Slownik Id -> wartosc z listy gateway API (z pamiecia podreczna).
+
+    Pobiera liste ponownie, gdy brakuje w niej potrzebnego Id, ale najwyzej
+    raz na SLOWNIK_ODSWIEZANIE (nowa kategoria pojawi sie bez restartu HA).
+    """
+    wpis = slowniki.get(zasob)
+    teraz = time.monotonic()
+    if wpis is not None and (
+        potrzebne <= wpis["dane"].keys() or teraz - wpis["czas"] < SLOWNIK_ODSWIEZANIE
+    ):
+        return wpis["dane"]
+    dane = wpis["dane"] if wpis else {}
+    try:
+        lista = (client.get(api + zasob).json() or {}).get(klucz_listy)
+        if isinstance(lista, list):
+            dane = {e["Id"]: wartosc(e) for e in lista if isinstance(e, dict) and "Id" in e}
+    except Exception as ex:
+        _LOGGER.debug("Nie udało się pobrać %s: %s", zasob, ex)
+    slowniki[zasob] = {"dane": dane, "czas": teraz}
+    return dane
+
+
+def _id(ref) -> Any:
+    return ref.get("Id") if isinstance(ref, dict) else None
+
+
+def _fetch_teacher_assignments(client, slowniki: dict) -> list | None:
+    """Pobierz i zmapuj zadania od nauczycieli (wywolywane w executorze)."""
+    _ensure_oauth(client)
+    api = client.BASE_URL + "/gateway/api/2.0/"
+    resp = client.get(api + "HomeWorkAssignments")
+    if resp.status_code == 401:
+        _ensure_oauth(client, force_refresh=True)
+        resp = client.get(api + "HomeWorkAssignments")
+    if resp.status_code == 403:
+        raise PermissionError("Brak dostępu do HomeWorkAssignments")
+    zadania = (resp.json() or {}).get("HomeWorkAssignments")
+    if zadania is None:
+        _LOGGER.warning("Zadania od nauczycieli: brak pola 'HomeWorkAssignments'")
+        return None
+    if not zadania:
+        return []
+
+    def potrzebne(pole):
+        return {_id(z.get(pole)) for z in zadania} - {None}
+
+    # Adres lekcji z API (".../Lesson/<id>") zwraca 404 - przedmiot bierzemy z listy Lessons
+    lekcje = _slownik(client, api, slowniki, "Lessons", "Lessons",
+                      lambda e: _id(e.get("Subject")), potrzebne("Lesson"))
+    przedmioty = _slownik(client, api, slowniki, "Subjects", "Subjects",
+                          lambda e: (e.get("Name") or "").strip(), set(lekcje.values()) - {None})
+    kategorie = _slownik(client, api, slowniki, "HomeWorkAssignments/Categories", "Categories",
+                         lambda e: (e.get("CategoryName") or e.get("Name") or "").strip(),
+                         potrzebne("Category"))
+    osoby = _slownik(client, api, slowniki, "Users", "Users",
+                     lambda e: f"{e.get('LastName', '')} {e.get('FirstName', '')}".strip(),
+                     potrzebne("Teacher"))
+    for z in zadania:
+        z["_przedmiot"] = przedmioty.get(lekcje.get(_id(z.get("Lesson"))), "")
+        z["_kategoria"] = kategorie.get(_id(z.get("Category")), "")
+        z["_nauczyciel"] = osoby.get(_id(z.get("Teacher")), "")
+    return _map_teacher_assignments(zadania)
+
+
+def _map_teacher_assignments(zadania: list) -> list:
+    """Zamien surowe zadania od nauczycieli na liste slownikow (wg terminu)."""
+    result = []
+    for z in zadania:
+        result.append({
+            "id": z.get("Id"),
+            "temat": (z.get("Topic") or "").strip(),
+            "tresc": (z.get("Text") or "").strip(),
+            "przedmiot": z.get("_przedmiot", ""),
+            "kategoria": z.get("_kategoria", ""),
+            "nauczyciel": z.get("_nauczyciel", ""),
+            "data": (z.get("Date") or "")[:10],
+            "termin": (z.get("DueDate") or "")[:10],
+            "przeczytane": bool(z.get("StudentsWhoRead")),
+            "zrobione": bool(z.get("StudentsWhoMarkedAsDone")),
+            "pliki": len(z.get("HomeworkAssigmentFiles") or []),
+            "trzeba_odeslac_plik": bool(z.get("MustSendAttachFile")),
+        })
+    return sorted(result, key=lambda z: (z["termin"], z["id"] or 0))
 
 
 def _fetch_notes(client) -> list | None:
