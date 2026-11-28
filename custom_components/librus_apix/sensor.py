@@ -82,10 +82,11 @@ def _jest_nowa(date_str: str) -> bool:
 def _podziel_oceny(oceny: List[Dict]) -> tuple:
     """Rozdziel oceny na skale 1-6 (z +/-, literowe) i wyniki procentowe/punktowe.
 
-    Pomija oceny niewliczane do sredniej (liczona: false).
+    Pomija oceny niewliczane do sredniej (liczona: false). Skala to pary
+    (wartosc, waga z oceny) - wagi uwzglednia `_srednia_wazona`.
     """
     import re
-    skala: List[float] = []
+    skala: List[tuple] = []
     procenty: List[float] = []
 
     literowe = {"A": 5.0, "B": 4.0, "C": 2.0, "D": 1.0, "E": 1.0, "F": 1.0}
@@ -137,32 +138,72 @@ def _podziel_oceny(oceny: List[Dict]) -> tuple:
                         base += 0.5
                     elif "-" in grade_str:
                         base -= 0.25
-                skala.append(base)
+                skala.append((base, g.get("waga")))
                 continue
 
-            # 3. Standardowa logika Librusa 1-6
-            base = float(grade_str[0])
-            if len(grade_str) > 1:
-                if "+" in grade_str:
-                    base += 0.5
-                elif "-" in grade_str:
-                    base -= 0.25
-            skala.append(base)
+            # 3. Standardowa logika Librusa 1-6. Znak przed albo po cyfrze
+            # ("+5", "-5", "5+", "5-"); "0" i inne spoza skali pomijamy (#65)
+            m = re.match(r"^([+-]?)([0-6])(.*)$", grade_str)
+            if not m or m.group(2) == "0":
+                continue
+            base = float(m.group(2))
+            znak = m.group(1) or ("+" if "+" in m.group(3) else "-" if "-" in m.group(3) else "")
+            if znak == "+":
+                base += 0.5
+            elif znak == "-":
+                base -= 0.25
+            skala.append((base, g.get("waga")))
         except (ValueError, IndexError):
             continue
     return skala, procenty
+
+
+def _waga(waga) -> Optional[float]:
+    """Waga oceny jako liczba (None gdy brak lub nieczytelna)."""
+    try:
+        return float(waga) if waga is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _srednia_wazona(skala: List[tuple]) -> Optional[float]:
+    """Srednia wazona ocen 1-6 z par (wartosc, waga).
+
+    Biblioteka wpisuje wage 0 takze wtedy, gdy ocena nie ma pola "Waga"
+    (szkola bez wag). Dlatego waga 0 pomija ocene tylko, gdy wsrod ocen sa
+    wagi wieksze od 0; bez zadnej wagi srednia jest arytmetyczna.
+    """
+    wagi = [_waga(w) for _, w in skala]
+    if any(w is not None and w > 0 for w in wagi):
+        pary = [(v, 1.0 if w is None else w) for (v, _), w in zip(skala, wagi)]
+        pary = [(v, w) for v, w in pary if w > 0]
+    else:
+        pary = [(v, 1.0) for v, _ in skala]
+    suma_wag = sum(w for _, w in pary)
+    return round(sum(v * w for v, w in pary) / suma_wag, 2) if suma_wag else None
 
 
 def _srednia_ocen(oceny: List[Dict]) -> Optional[float]:
     """Srednia ocen (bez ocen niewliczanych do sredniej).
 
     Wyniki procentowe/punktowe nie mieszaja sie z ocenami 1-6 (#52): gdy sa
-    oceny 1-6, srednia liczona jest tylko z nich. Gdy sa wylacznie wyniki
-    procentowe, srednia jest z procentow - jak dotad.
+    oceny 1-6, srednia (wazona, #65) liczona jest tylko z nich. Gdy sa
+    wylacznie wyniki procentowe, srednia jest z procentow - jak dotad.
     """
     skala, procenty = _podziel_oceny(oceny)
-    wartosci = skala or procenty
-    return round(sum(wartosci) / len(wartosci), 2) if wartosci else None
+    if skala:
+        return _srednia_wazona(skala)
+    return round(sum(procenty) / len(procenty), 2) if procenty else None
+
+
+def _srednia_przedmiotu(data: Dict[str, Any], przedmiot: str, oceny: List[Dict]) -> tuple:
+    """Srednia przedmiotu i jej zrodlo: z Librusa, gdy szkola ja pokazuje,
+    w przeciwnym razie wyliczona z ocen (#65)."""
+    z_librusa = (data.get("srednie_librus") or {}).get(przedmiot)
+    if z_librusa is not None:
+        return z_librusa, "librus"
+    srednia = _srednia_ocen(oceny)
+    return srednia, ("wyliczona" if srednia is not None else None)
 
 
 def _srednia_procent(oceny: List[Dict]) -> Optional[float]:
@@ -532,6 +573,12 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                     "nie miec dostepu do dziennika ocen (np. konto przedszkolaka)."
                 )
                 grades = prev.get("oceny_wszystkie", prev.get("oceny", []))
+                srednie_librus = prev.get("srednie_librus", {})
+            else:
+                # Srednie z Librusa (gdy szkola je pokazuje) z tego samego pobrania ocen (#65)
+                srednie_librus = getattr(self.client, "_srednie_librus", None)
+                if not isinstance(srednie_librus, dict):
+                    srednie_librus = {}
 
             if student_info is None:
                 student_info = prev.get("student_info")
@@ -789,6 +836,7 @@ class LibrusDataUpdateCoordinator(DataUpdateCoordinator):
                 "zachowanie": zachowanie,
                 "frekwencja_stat": frekwencja_stat,
                 "semestr_biezacy": current_sem,
+                "srednie_librus": srednie_librus,
             }
 
             try:
@@ -1153,7 +1201,7 @@ class LibrusPrzedmiotSensor(CoordinatorEntity, SensorEntity):
         if not oceny:
             return {}
 
-        srednia = _srednia_ocen(oceny)
+        srednia, zrodlo = _srednia_przedmiotu(self.coordinator.data or {}, self._subject, oceny)
 
         # Najnowsza ocena wg daty
         najnowsza: Optional[Dict] = None
@@ -1173,6 +1221,7 @@ class LibrusPrzedmiotSensor(CoordinatorEntity, SensorEntity):
             "oceny": oceny,
             "lista_ocen": ", ".join(g["ocena"] for g in oceny),
             "srednia": srednia,
+            "zrodlo_sredniej": zrodlo,
             "srednia_procent": _srednia_procent(oceny),
             "najnowsza_ocena": najnowsza,
             "sa_nowe_oceny": any(g["jest_nowa"] for g in oceny),
@@ -1210,11 +1259,11 @@ class LibrusSredniaOcenSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
         data = self.coordinator.data or {}
-        srednie_przedmiotow = {
-            subject: _srednia_ocen(oceny)
-            for subject, oceny in data.get("oceny_wg_przedmiotu", {}).items()
-            if _srednia_ocen(oceny) is not None
-        }
+        srednie_przedmiotow = {}
+        for subject, oceny in data.get("oceny_wg_przedmiotu", {}).items():
+            srednia, _ = _srednia_przedmiotu(data, subject, oceny)
+            if srednia is not None:
+                srednie_przedmiotow[subject] = srednia
         return {
             "srednie_wg_przedmiotow": srednie_przedmiotow,
             "semestr": data.get("semestr_biezacy"),
@@ -1248,14 +1297,17 @@ class LibrusSredniaPrzedmiotuSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self) -> Optional[float]:
-        oceny = (self.coordinator.data or {}).get("oceny_wg_przedmiotu", {}).get(self._subject, [])
-        return _srednia_ocen(oceny)
+        data = self.coordinator.data or {}
+        oceny = data.get("oceny_wg_przedmiotu", {}).get(self._subject, [])
+        return _srednia_przedmiotu(data, self._subject, oceny)[0]
 
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
-        oceny = (self.coordinator.data or {}).get("oceny_wg_przedmiotu", {}).get(self._subject, [])
+        data = self.coordinator.data or {}
+        oceny = data.get("oceny_wg_przedmiotu", {}).get(self._subject, [])
         return {
             "przedmiot": self._subject,
+            "zrodlo_sredniej": _srednia_przedmiotu(data, self._subject, oceny)[1],
             "lista_ocen": ", ".join(g["ocena"] for g in oceny),
             "liczba_ocen": len(oceny),
             "srednia_procent": _srednia_procent(oceny),

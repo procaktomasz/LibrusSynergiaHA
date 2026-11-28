@@ -233,6 +233,27 @@ def _opis_oceny(desc: str) -> str:
     return " · ".join(x for x in opis if x)
 
 
+def _srednie_z_librusa(srednie, semestr: int) -> Dict[str, float]:
+    """Srednie przedmiotow z tabeli ocen Librusa dla danego semestru (#65).
+
+    `srednie` to slownik przedmiot -> lista Gpa z biblioteki. Gdy szkola nie
+    pokazuje srednich, Librus ma tam "-" (albo nic) - takich nie zwracamy,
+    wtedy czujniki licza srednia same.
+    """
+    wynik: Dict[str, float] = {}
+    for przedmiot, lista in (srednie or {}).items():
+        for gpa in lista or []:
+            if getattr(gpa, "semester", None) != semestr:
+                continue
+            try:
+                wartosc = float(str(getattr(gpa, "gpa", "")).replace(",", ".").strip())
+            except (TypeError, ValueError):
+                continue
+            if 1.0 <= wartosc <= 6.0:
+                wynik[przedmiot] = round(wartosc, 2)
+    return wynik
+
+
 def _rozdziel_nauczyciela_i_sale(tekst: str) -> tuple[str, str]:
     """Nauczyciel i sala z tekstu planu ("Kowalski Jan s. 12", "Kowalski Jan - 5").
 
@@ -634,6 +655,8 @@ class LibrusApiClient:
     # TokenError na sesji mlodszej niz to (s) oznacza brak dostepu do modulu
     SWIEZA_SESJA = 60
     BRAK_DOSTEPU_BLOKADA = 24 * 3600
+    # Srednie przedmiotow z Librusa z ostatniego pobrania ocen (#65)
+    _srednie_librus: Dict[str, float] = {}
 
     def __init__(self, username: str, password: str, options: dict = None, hass: HomeAssistant = None):
         """Initialize the client."""
@@ -1013,6 +1036,12 @@ class LibrusApiClient:
                         all_grades[indeksy.pop(0)] = g
                         continue
                     all_grades.append(g)
+
+                try:
+                    self._srednie_librus = _srednie_z_librusa(average_grades, current_sem)
+                except Exception as avg_ex:
+                    _LOGGER.debug("Nie udało się odczytać średnich z Librusa: %s", avg_ex)
+                    self._srednie_librus = {}
 
                 return all_grades
 
